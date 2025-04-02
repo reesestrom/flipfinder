@@ -28,7 +28,7 @@ function App() {
       setUserPreferences(JSON.parse(storedPrefs || "[]"));
   
       // 🔁 Load saved items from backend on refresh/login
-      fetch(`http://localhost:8000/saved_items/${storedUser}`)
+      fetch(`https://flipfinder-backend.onrender.com/saved_items/${storedUser}`)
         .then(res => res.json())
         .then(data => setSavedItems(data))
         .catch(err => console.error("Failed to load saved items:", err));
@@ -39,7 +39,7 @@ function App() {
   async function handleSignupSubmit(e) {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:8000/signup", {
+      const res = await fetch("https://flipfinder-backend.onrender.com/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(signupData)
@@ -62,7 +62,7 @@ function App() {
   async function handleLoginSubmit(e) {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:8000/login", {
+      const res = await fetch("https://flipfinder-backend.onrender.com/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(loginData)
@@ -74,7 +74,7 @@ function App() {
         localStorage.setItem("user", data.username);
   
         // ⬇️ Fetch saved listings for this user and store in state
-        fetch(`http://localhost:8000/saved_items/${data.username}`)
+        fetch(`https://flipfinder-backend.onrender.com/saved_items/${data.username}`)
           .then(res => res.json())
           .then(items => setSavedItems(items))
           .catch(err => console.error("Failed to load saved items after login:", err));
@@ -95,7 +95,7 @@ function App() {
     setSavedItems(updated);
   
     try {
-      await fetch("http://localhost:8000/save_item", {
+      await fetch("https://flipfinder-backend.onrender.com/save_item", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, item })
@@ -153,7 +153,7 @@ function App() {
     try {
       for (let i = 0; i < searchInputs.length; i++) {
         const query = searchInputs[i];
-        const res = await fetch("http://localhost:8000/ai_search", {
+        const res = await fetch("https://flipfinder-backend.onrender.com/ai_search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ search: query })
