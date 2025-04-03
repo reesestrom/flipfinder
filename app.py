@@ -295,7 +295,16 @@ def search_ebay(parsed, original_input, postal_code=None):
 
 
     def calculate_profit(item):
-        asyncio.create_task(message_queue.put("increment"))
+        def safe_enqueue_increment():
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(message_queue.put("increment"))
+            except RuntimeError:
+                # fallback if no loop is running — do it synchronously
+                asyncio.run(message_queue.put("increment"))
+
+        # Call this inside calculate_profit
+        safe_enqueue_increment()
         price = float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
 
