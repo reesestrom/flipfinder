@@ -148,6 +148,7 @@ def get_ebay_token():
 
 class NaturalQuery(BaseModel):
     search: str
+    postalCode: str | None = None  # ✅ Add this line to accept user ZIP
 
 def parse_search_criteria(natural_input):
     prompt = f"""
@@ -252,25 +253,9 @@ def search_ebay(parsed, original_input):
 
     def extract_shipping_cost(item):
         try:
-            options = item.get("shippingOptions", [])
-            if not options:
-                return 0.0
-
-            cost_data = options[0].get("shippingCost", {})
-            if "value" in cost_data:
-                return float(cost_data["value"])
-            
-            # Catch "CALCULATED" or "NOT_SPECIFIED" types that aren't numeric
-            if cost_data.get("type") in ["CALCULATED", "NOT_SPECIFIED"]:
-                print(f"⚠️ Shipping cost type is {cost_data.get('type')} — skipping item: {item.get('title')}")
-                return 0.0
-
-            return 0.0
-        except Exception as e:
-            print(f"⚠️ Error extracting shipping from item: {item.get('title')}")
-            print(e)
-            return 0.0
-
+            return float(item.get("shippingOptions", [{}])[0].get("shippingCost", {}).get("value", 0))
+        except:
+            return 0
 
     def calculate_profit(item):
         price = float(item.get("price", {}).get("value", 0))
@@ -307,14 +292,6 @@ def search_ebay(parsed, original_input):
                 "thumbnail": item.get("image", {}).get("imageUrl"),
                 "url": item.get("itemWebUrl")
             })
-            print("🧾 Final listing selected:")
-            print(json.dumps({
-                "title": item.get("title"),
-                "price": item.get("price", {}).get("value"),
-                "shippingOptions": item.get("shippingOptions"),
-                "url": item.get("itemWebUrl")
-            }, indent=2))
-
 
         return filtered
 

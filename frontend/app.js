@@ -7,11 +7,12 @@ function App() {
   const [parsedQueries, setParsedQueries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
+  const [userZip, setUserZip] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userPreferences, setUserPreferences] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [signupData, setSignupData] = useState({ username: "", email: "", password: "" });
+  const [signupData, setSignupData] = useState({ username: "", email: "", password: "", zip: "" });
   const [signupMessage, setSignupMessage] = useState("");
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [loginMessage, setLoginMessage] = useState("");
@@ -22,18 +23,18 @@ function App() {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedPrefs = localStorage.getItem("userPreferences");
+    const storedZip = localStorage.getItem("zip");  // ✅
+  
     if (storedUser) {
       setUsername(storedUser);
       setIsAuthenticated(true);
       setUserPreferences(JSON.parse(storedPrefs || "[]"));
-  
-      // 🔁 Load saved items from backend on refresh/login
-      fetch(`https://flipfinder.onrender.com/saved_items/${storedUser}`)
-        .then(res => res.json())
-        .then(data => setSavedItems(data))
-        .catch(err => console.error("Failed to load saved items:", err));
     }
-  }, []);
+  
+    if (storedZip) {
+      setUserZip(storedZip);  // ✅
+    }
+  }, []);  
   
 
   async function handleSignupSubmit(e) {
@@ -48,8 +49,10 @@ function App() {
       if (res.ok) {
         setUsername(signupData.username);
         setIsAuthenticated(true);
+        setUserZip(signupData.zip);  // ✅
         localStorage.setItem("user", signupData.username);
         localStorage.setItem("userPreferences", JSON.stringify(userPreferences));
+        localStorage.setItem("zip", signupData.zip);  // ✅
         setSignupMessage("Signup successful!");
       } else {
         setSignupMessage(data.detail || "Signup failed");
@@ -71,8 +74,12 @@ function App() {
       if (res.ok) {
         setUsername(data.username);
         setIsAuthenticated(true);
+      
+        // ✅ Save ZIP from login response (if available)
+        setUserZip(data.zip || "");
         localStorage.setItem("user", data.username);
-  
+        localStorage.setItem("zip", data.zip || "");
+      
         // ⬇️ Fetch saved listings for this user and store in state
         fetch(`https://flipfinder.onrender.com/saved_items/${data.username}`)
           .then(res => res.json())
@@ -156,8 +163,12 @@ function App() {
         const res = await fetch("https://flipfinder.onrender.com/ai_search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ search: query })
+          body: JSON.stringify({
+            search: query,
+            postalCode: userZip || "10001"  // ✅ Use saved ZIP or fallback
+          })          
         });
+        
   
         if (!res.ok) throw new Error("Search failed");
   
@@ -251,12 +262,30 @@ function App() {
               })
             )
           ),
+          // ✅ ZIP Code input
+          React.createElement("div", { style: { marginBottom: "10px" } },
+            React.createElement("input", {
+              type: "text",
+              placeholder: "ZIP Code",
+              value: signupData.zip,
+              required: true,
+              onChange: e => setSignupData({ ...signupData, zip: e.target.value }),
+              style: {
+                width: "100%",
+                padding: "10px",
+                fontSize: "16px",
+                border: "1px solid #ccc",
+                borderRadius: "8px"
+              }
+            })
+          ),
           React.createElement("button", { type: "submit", className: "buttonSecondary", style: { width: "100%", padding: "10px" } }, "Sign Up"),
           signupMessage && React.createElement("p", null, signupMessage)
         )
       )
     );
   }
+  
 
   return React.createElement("div", { style: { maxWidth: "800px", margin: "auto", padding: "20px" } },
     React.createElement("div", { className: "logo-wrapper" },
