@@ -217,7 +217,7 @@ def refined_avg_price(title):
     }
     params = {
         "q": title,
-        "limit": "10"
+        "limit": "25"
     }
     response = requests.get(url, headers=headers, params=params)
     if response.status_code != 200:
@@ -304,7 +304,8 @@ def search_ebay(parsed, original_input, postal_code=None):
                 asyncio.run(message_queue.put("increment"))
 
         # Call this inside calculate_profit
-        safe_enqueue_increment()
+        for _ in range(26):
+            safe_enqueue_increment()
         price = float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
 
