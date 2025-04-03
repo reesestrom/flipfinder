@@ -17,7 +17,7 @@ import re
 load_dotenv()
 print("🔑 OpenAI API Key:", os.getenv("OPENAI_API_KEY"))
 
-from models import User, SessionLocal, SavedItem
+from models import Base, User, SavedItem, SessionLocal, engine
 from sqlalchemy.orm import Session
 
 app = FastAPI()
@@ -424,3 +424,9 @@ def ai_search(nq: NaturalQuery):
         print("Error:", e)
         raise HTTPException(status_code=500, detail="Something went wrong.")
 
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    import traceback
+    print("❌ Error running Base.metadata.create_all")
+    traceback.print_exc()
