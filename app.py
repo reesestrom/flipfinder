@@ -312,7 +312,7 @@ def search_ebay(parsed, original_input, postal_code=None):
     max_iterations = 10
 
     def try_query(q, cond, includes, excludes):
-        raw_items = run_ebay_search(q, cond, includes, excludes)
+        raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
         results = filter_and_score(raw_items, includes, excludes)
         for r in results:
             if r["title"] not in seen_titles:

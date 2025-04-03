@@ -8,6 +8,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userZip, setUserZip] = useState("");
   const [userPreferences, setUserPreferences] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
