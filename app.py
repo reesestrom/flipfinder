@@ -202,22 +202,37 @@ Example format:
 
 
 def refined_avg_price(title):
-    url = "https://api.ebay.com/buy/browse/v1/item_summary/search"
+    url = "https://svcs.ebay.com/services/search/FindingService/v1"
     headers = {
-        "Authorization": f"Bearer {get_ebay_token()}",
-        "Content-Type": "application/json",
+        "X-EBAY-SOA-SECURITY-APPNAME": EBAY_CLIENT_ID,
+        "X-EBAY-SOA-OPERATION-NAME": "findCompletedItems",
+        "X-EBAY-SOA-SERVICE-VERSION": "1.13.0",
+        "X-EBAY-SOA-REQUEST-DATA-FORMAT": "JSON",
     }
     params = {
-        "q": title,
-        "limit": "10"
+        "keywords": title,
+        "paginationInput.entriesPerPage": "10",
+        "itemFilter(0).name": "SoldItemsOnly",
+        "itemFilter(0).value": "true",
+        "response-data-format": "JSON",
     }
+
     response = requests.get(url, headers=headers, params=params)
     if response.status_code != 200:
+        print("❌ eBay completed sales API error:", response.text)
         return 0
-    data = response.json()
-    items = data.get("itemSummaries", [])
-    prices = [float(item["price"]["value"]) for item in items if "price" in item]
-    return sum(prices) / len(prices) if prices else 0
+
+    try:
+        items = response.json()["findCompletedItemsResponse"][0]["searchResult"][0].get("item", [])
+        prices = [
+            float(item["sellingStatus"][0]["currentPrice"][0]["__value__"])
+            for item in items
+            if "sellingStatus" in item and "currentPrice" in item["sellingStatus"][0]
+        ]
+        return sum(prices) / len(prices) if prices else -999
+    except Exception as e:
+        print("⚠️ Error parsing completed sale prices:", e)
+        return -999
 
 import asyncio
 
