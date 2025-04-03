@@ -263,27 +263,18 @@ def search_ebay(parsed, original_input, postal_code=None):
         shipping_options = item.get("shippingOptions", [])
         if not shipping_options:
             print(f"⚠️ No shippingOptions found for item: {item.get('title')}")
-            return None  # ❌ No shipping info at all
+            return 0.0
 
-        for option in shipping_options:
-            shipping_type = option.get("shippingType", "").lower()
+        first_option = shipping_options[0]
+        cost_data = first_option.get("shippingCost", {})
 
-            # ✅ We're only interested in actual shipping options (not just pickup)
-            if "pickup" in shipping_type:
-                continue  # Skip pickup-only lines, but keep looking
+        if not cost_data:
+            print(f"⚠️ shippingCost missing in option: {first_option}")
+            return 0.0
 
-            cost_data = option.get("shippingCost", {})
-
-            # ✅ Accept both free and paid shipping
-            if cost_data is not None and "value" in cost_data:
-                cost = float(cost_data["value"])
-                print(f"✅ Found shipping: ${cost:.2f} for {item.get('title')}")
-                return cost
-
-        # ❌ If we got here, then there were no valid shipping options (only pickup or junk)
-        print(f"❌ Only pickup found — skipping: {item.get('title')}")
-        return None
-
+        cost = cost_data.get("value", 0)
+        print(f"✅ Extracted shipping cost: {cost} for item: {item.get('title')}")
+        return float(cost)
 
 
     def calculate_profit(item):
@@ -292,7 +283,6 @@ def search_ebay(parsed, original_input, postal_code=None):
         total_price = price + shipping
         refined_resale = refined_avg_price(item.get("title", ""))
         profit = (refined_resale * 0.85) - total_price
-        shipping = extract_shipping_cost(item)
         roi = round(profit / total_price, 2) if total_price > 0 else 0
         return total_price, profit, roi, price, shipping
 
@@ -308,8 +298,6 @@ def search_ebay(parsed, original_input, postal_code=None):
 
             total_price, profit_value, roi, item_price, shipping = calculate_profit(item)
 
-            if shipping is None:
-                continue  # ✅ Skip if no usable shipping info
             if profit_value <= 0:
                 continue
 
@@ -326,7 +314,6 @@ def search_ebay(parsed, original_input, postal_code=None):
             })
 
         return filtered
-
 
     query = parsed["query"]
     condition = parsed.get("condition", "any")
