@@ -27,11 +27,17 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://flipfinderwebsite.onrender.com"],  # Your frontend domain
+    allow_origins=[
+        "https://flipfinderwebsite.onrender.com",  # production frontend
+        "http://localhost:3000",                   # local React dev
+        "http://127.0.0.1:3000",                   # fallback local
+        "null"                                     # file:// access during local dev
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 EBAY_CLIENT_ID = os.getenv("EBAY_CLIENT_ID", "your-ebay-client-id")
 EBAY_CLIENT_SECRET = os.getenv("EBAY_CLIENT_SECRET", "your-ebay-client-secret")
