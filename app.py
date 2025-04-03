@@ -252,13 +252,27 @@ def search_ebay(parsed, original_input):
 
     def extract_shipping_cost(item):
         try:
-            return float(item.get("shippingOptions", [{}])[0].get("shippingCost", {}).get("value", 0))
-        except:
-            return 0
+            options = item.get("shippingOptions", [])
+            if not options:
+                return 0.0
+            
+            cost_info = options[0].get("shippingCost", {})
+            if not cost_info:
+                return 0.0
+            
+            return float(cost_info.get("value", 0.0))
+        except Exception as e:
+            print(f"⚠️ Shipping extraction error for item: {item.get('title')}")
+            print(e)
+            return 0.0
+        
+
 
     def calculate_profit(item):
         price = float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
+        if shipping == 0:
+            print(f"🔍 Potential missing shipping: {item.get('title')} — {item.get('itemWebUrl')}")
         total_price = price + shipping
         refined_resale = refined_avg_price(item.get("title", ""))
         profit = (refined_resale * 0.85) - total_price
