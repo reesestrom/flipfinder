@@ -255,8 +255,7 @@ def search_ebay(parsed, original_input, postal_code=None):
             return []
 
         data = response.json()
-        print("📦 Raw eBay item data:")
-        print(json.dumps(item, indent=2))
+
 
         return data.get("itemSummaries", [])
 
