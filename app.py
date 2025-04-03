@@ -263,18 +263,27 @@ def search_ebay(parsed, original_input, postal_code=None):
         shipping_options = item.get("shippingOptions", [])
         if not shipping_options:
             print(f"⚠️ No shippingOptions found for item: {item.get('title')}")
-            return 0.0
+            return None  # ❌ No shipping info at all
 
-        first_option = shipping_options[0]
-        cost_data = first_option.get("shippingCost", {})
+        for option in shipping_options:
+            shipping_type = option.get("shippingType", "").lower()
 
-        if not cost_data:
-            print(f"⚠️ shippingCost missing in option: {first_option}")
-            return 0.0
+            # ✅ We're only interested in actual shipping options (not just pickup)
+            if "pickup" in shipping_type:
+                continue  # Skip pickup-only lines, but keep looking
 
-        cost = cost_data.get("value", 0)
-        print(f"✅ Extracted shipping cost: {cost} for item: {item.get('title')}")
-        return float(cost)
+            cost_data = option.get("shippingCost", {})
+
+            # ✅ Accept both free and paid shipping
+            if cost_data is not None and "value" in cost_data:
+                cost = float(cost_data["value"])
+                print(f"✅ Found shipping: ${cost:.2f} for {item.get('title')}")
+                return cost
+
+        # ❌ If we got here, then there were no valid shipping options (only pickup or junk)
+        print(f"❌ Only pickup found — skipping: {item.get('title')}")
+        return None
+
 
 
     def calculate_profit(item):
@@ -283,6 +292,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         total_price = price + shipping
         refined_resale = refined_avg_price(item.get("title", ""))
         profit = (refined_resale * 0.85) - total_price
+        shipping = extract_shipping_cost(item)
         roi = round(profit / total_price, 2) if total_price > 0 else 0
         return total_price, profit, roi, price, shipping
 
@@ -295,6 +305,8 @@ def search_ebay(parsed, original_input, postal_code=None):
                 continue
             if not all(term.lower() in title for term in include_terms):
                 continue
+            if shipping is None:
+                continue  # ❌ Skip this item — no usable shipping option
 
             total_price, profit_value, roi, item_price, shipping = calculate_profit(item)
 
@@ -375,7 +387,7 @@ Please try a **new, independent** eBay-style search query:
 - Reword the `query` to be simpler or more natural for eBay titles. The query must be only a few words long (2-3) (with an emphasis on brand names)
 - You may simplify or remove unnecessary words from the query and move them to include_terms.
 - Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
-- Please feel free to change any included and excluded terms, but make sure they are still connected to or relevant to the original search query
+- Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing "broken" to "not working")
 - Do NOT add unrelated words like "flipping", "resale", or adjectives like "mint", unless the user originally said so.
 
 Return ONLY valid JSON:
