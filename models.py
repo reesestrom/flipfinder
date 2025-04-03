@@ -17,8 +17,7 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    zip = Column(String, nullable=True)  # ✅ New ZIP code field
-    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))  # ✅ Aware UTC time
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     def verify_password(self, password: str) -> bool:
         return pwd_context.verify(password, self.hashed_password)
@@ -35,6 +34,6 @@ class SavedItem(Base):
     profit = Column(Float)
     url = Column(String)
     thumbnail = Column(String)
-    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))  # ✅ Aware UTC time
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 Base.metadata.create_all(bind=engine)

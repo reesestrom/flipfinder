@@ -148,7 +148,7 @@ def get_ebay_token():
 
 class NaturalQuery(BaseModel):
     search: str
-    postalCode: str | None = None  # ✅ Add this line to accept user ZIP
+    postalCode: str | None = None  # ✅ Add this line
 
 def parse_search_criteria(natural_input):
     prompt = f"""
@@ -221,13 +221,14 @@ def refined_avg_price(title):
 
 import asyncio
 
-def search_ebay(parsed, original_input):
-    def run_ebay_search(query, condition, include_terms, exclude_terms):
+def search_ebay(parsed, original_input, postal_code=None):
+    def run_ebay_search(query, condition, include_terms, exclude_terms, postal_code=None):
         url = "https://api.ebay.com/buy/browse/v1/item_summary/search"
         headers = {
             "Authorization": f"Bearer {get_ebay_token()}",
             "Content-Type": "application/json",
         }
+        
         filters = []
         if condition == "used":
             filters.append("conditionIds:{3000}")
@@ -235,10 +236,15 @@ def search_ebay(parsed, original_input):
             filters.append("conditionIds:{1000}")
         filter_str = ",".join(filters) if filters else None
 
+        import re  # ✅ Add this at the top of the file
         params = {
             "q": query,
             "limit": "80",
         }
+        # ✅ Add only if ZIP is valid 5-digit number
+        if postal_code and re.match(r"^\d{5}$", postal_code):
+            params["buyerPostalCode"] = postal_code
+
         print("📦 Sending eBay query:", query)
         if filter_str:
             params["filter"] = filter_str
@@ -409,7 +415,9 @@ def ai_search(nq: NaturalQuery):
         parsed = parse_search_criteria(nq.search)
         print("🔍 AI INTERPRETATION:")
         print(json.dumps(parsed, indent=2))
-        results = search_ebay(parsed, nq.search)
+
+        # ✅ Pass ZIP to eBay search
+        results = search_ebay(parsed, nq.search, postal_code=nq.postalCode)
 
         # ✅ Count ROI-qualified items (ROI >= 0.5)
         qualified_count = sum(1 for item in results if item.get("roi", 0) >= 0.5)
@@ -417,7 +425,7 @@ def ai_search(nq: NaturalQuery):
         return {
             "parsed": parsed,
             "results": results,
-            "qualified_count": qualified_count  # ✅ add to response
+            "qualified_count": qualified_count
         }
 
     except Exception as e:

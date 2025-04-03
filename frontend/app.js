@@ -7,12 +7,11 @@ function App() {
   const [parsedQueries, setParsedQueries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
-  const [userZip, setUserZip] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userPreferences, setUserPreferences] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [signupData, setSignupData] = useState({ username: "", email: "", password: "", zip: "" });
+  const [signupData, setSignupData] = useState({ username: "", email: "", password: "" });
   const [signupMessage, setSignupMessage] = useState("");
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [loginMessage, setLoginMessage] = useState("");
@@ -23,7 +22,7 @@ function App() {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedPrefs = localStorage.getItem("userPreferences");
-    const storedZip = localStorage.getItem("zip");  // ✅
+    const storedZip = localStorage.getItem("zip");
   
     if (storedUser) {
       setUsername(storedUser);
@@ -32,9 +31,20 @@ function App() {
     }
   
     if (storedZip) {
-      setUserZip(storedZip);  // ✅
+      setUserZip(storedZip);
+    } else {
+      // ✅ Try to detect ZIP via geolocation and store it
+      fetchZipFromLocation()
+        .then(zip => {
+          if (zip) {
+            setUserZip(zip);
+            localStorage.setItem("zip", zip);
+          }
+        })
+        .catch(err => console.warn("Could not get ZIP from geolocation:", err));
     }
-  }, []);  
+  }, []);
+  
   
 
   async function handleSignupSubmit(e) {
@@ -49,10 +59,8 @@ function App() {
       if (res.ok) {
         setUsername(signupData.username);
         setIsAuthenticated(true);
-        setUserZip(signupData.zip);  // ✅
         localStorage.setItem("user", signupData.username);
         localStorage.setItem("userPreferences", JSON.stringify(userPreferences));
-        localStorage.setItem("zip", signupData.zip);  // ✅
         setSignupMessage("Signup successful!");
       } else {
         setSignupMessage(data.detail || "Signup failed");
@@ -61,6 +69,30 @@ function App() {
       setSignupMessage("An error occurred during signup.");
     }
   }
+
+  async function fetchZipFromLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject("Geolocation not supported");
+        return;
+      }
+  
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(
+            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${process.env.REACT_APP_OPENCAGE_KEY}`
+          );
+          const data = await response.json();
+          const zip = data?.results?.[0]?.components?.postcode;
+          resolve(zip || null);
+        } catch (err) {
+          reject(err);
+        }
+      }, reject);
+    });
+  }
+  
 
   async function handleLoginSubmit(e) {
     e.preventDefault();
@@ -74,12 +106,8 @@ function App() {
       if (res.ok) {
         setUsername(data.username);
         setIsAuthenticated(true);
-      
-        // ✅ Save ZIP from login response (if available)
-        setUserZip(data.zip || "");
         localStorage.setItem("user", data.username);
-        localStorage.setItem("zip", data.zip || "");
-      
+  
         // ⬇️ Fetch saved listings for this user and store in state
         fetch(`https://flipfinder.onrender.com/saved_items/${data.username}`)
           .then(res => res.json())
@@ -165,10 +193,9 @@ function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             search: query,
-            postalCode: userZip || "10001"  // ✅ Use saved ZIP or fallback
+            postalCode: userZip || "10001"  // ✅ Use ZIP or fallback
           })          
         });
-        
   
         if (!res.ok) throw new Error("Search failed");
   
@@ -262,30 +289,12 @@ function App() {
               })
             )
           ),
-          // ✅ ZIP Code input
-          React.createElement("div", { style: { marginBottom: "10px" } },
-            React.createElement("input", {
-              type: "text",
-              placeholder: "ZIP Code",
-              value: signupData.zip,
-              required: true,
-              onChange: e => setSignupData({ ...signupData, zip: e.target.value }),
-              style: {
-                width: "100%",
-                padding: "10px",
-                fontSize: "16px",
-                border: "1px solid #ccc",
-                borderRadius: "8px"
-              }
-            })
-          ),
           React.createElement("button", { type: "submit", className: "buttonSecondary", style: { width: "100%", padding: "10px" } }, "Sign Up"),
           signupMessage && React.createElement("p", null, signupMessage)
         )
       )
     );
   }
-  
 
   return React.createElement("div", { style: { maxWidth: "800px", margin: "auto", padding: "20px" } },
     React.createElement("div", { className: "logo-wrapper" },
