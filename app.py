@@ -255,13 +255,28 @@ def search_ebay(parsed, original_input, postal_code=None):
             return []
 
         data = response.json()
+        print("📦 Raw eBay item data:")
+        print(json.dumps(item, indent=2))
+
         return data.get("itemSummaries", [])
 
     def extract_shipping_cost(item):
-        try:
-            return float(item.get("shippingOptions", [{}])[0].get("shippingCost", {}).get("value", 0))
-        except:
-            return 0
+        shipping_options = item.get("shippingOptions", [])
+        if not shipping_options:
+            print(f"⚠️ No shippingOptions found for item: {item.get('title')}")
+            return 0.0
+
+        first_option = shipping_options[0]
+        cost_data = first_option.get("shippingCost", {})
+
+        if not cost_data:
+            print(f"⚠️ shippingCost missing in option: {first_option}")
+            return 0.0
+
+        cost = cost_data.get("value", 0)
+        print(f"✅ Extracted shipping cost: {cost} for item: {item.get('title')}")
+        return float(cost)
+
 
     def calculate_profit(item):
         price = float(item.get("price", {}).get("value", 0))
