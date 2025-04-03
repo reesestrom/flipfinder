@@ -372,11 +372,21 @@ function App() {
               marginRight: "10px"
             }
           }, "★"),
-        
           React.createElement("a", {
             href: item.url,
             target: "_blank",
             rel: "noopener noreferrer",
+            onClick: () => {
+              fetch("https://flipfinder.onrender.com/log_click", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  url: item.url,
+                  title: item.title,
+                  username: username || "Anonymous"
+                })
+              }).catch(err => console.error("Click log failed:", err));
+            },
             style: {
               display: "flex",
               alignItems: "center",
@@ -385,7 +395,7 @@ function App() {
               gap: "12px",
               flexGrow: 1
             }
-          },
+          },          
             item.thumbnail &&
             React.createElement("img", {
               src: item.thumbnail,

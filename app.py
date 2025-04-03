@@ -13,6 +13,13 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 message_queue = asyncio.Queue()
+import datetime
+
+def log_event(event_type: str, details: str):
+    timestamp = datetime.datetime.now().isoformat()
+    with open("analytics.log", "a") as log_file:
+        log_file.write(f"[{timestamp}] {event_type}: {details}\n")
+
 
 ROI_THRESHOLD = 0.1  # Minimum ROI (30%) required for all 5 items
 import traceback
@@ -71,6 +78,10 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # ✅ Log the signup
+    log_event("User Signup", f"username={new_user.username}, email={new_user.email}")
+
     return {"message": "User created successfully", "user_id": new_user.id}
 
 @app.post("/login")
@@ -78,6 +89,7 @@ def login(data: dict, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data["email"]).first()
     if not user or not user.verify_password(data["password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    log_event("User Login", f"username={user.username}, email={user.email}")
     return {"message": "Login successful", "username": user.username}
 
 @app.post("/save_item")
@@ -126,6 +138,13 @@ def get_saved_items(username: str, db: Session = Depends(get_db)):
             "url": item.url
         } for item in items
     ]
+@app.post("/log_click")
+def log_click(data: dict):
+    url = data.get("url", "UNKNOWN")
+    title = data.get("title", "No Title")
+    user = data.get("username", "Anonymous")
+    log_event("Item Click", f"user={user}, title={title}, url={url}")
+    return {"message": "Click logged"}
 
 
 # --- AI/Ebay Search Logic Below ---
@@ -466,6 +485,7 @@ Return ONLY valid JSON:
 
 @app.post("/ai_search")
 def ai_search(nq: NaturalQuery):
+    log_event("Search", f"query={nq.search}, zip={nq.postalCode or 'N/A'}")
     try:
         parsed = parse_search_criteria(nq.search)
         print("🔍 AI INTERPRETATION:")
