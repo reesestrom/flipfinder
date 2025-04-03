@@ -10,6 +10,7 @@ import time
 import base64
 import os
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 ROI_THRESHOLD = 0.1  # Minimum ROI (30%) required for all 5 items
 import traceback
@@ -24,7 +25,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["https://flipfinderwebsite.onrender.com"],  # Your frontend domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
