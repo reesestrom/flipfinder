@@ -255,24 +255,26 @@ def search_ebay(parsed, original_input):
             options = item.get("shippingOptions", [])
             if not options:
                 return 0.0
+
+            cost_data = options[0].get("shippingCost", {})
+            if "value" in cost_data:
+                return float(cost_data["value"])
             
-            cost_info = options[0].get("shippingCost", {})
-            if not cost_info:
+            # Catch "CALCULATED" or "NOT_SPECIFIED" types that aren't numeric
+            if cost_data.get("type") in ["CALCULATED", "NOT_SPECIFIED"]:
+                print(f"⚠️ Shipping cost type is {cost_data.get('type')} — skipping item: {item.get('title')}")
                 return 0.0
-            
-            return float(cost_info.get("value", 0.0))
+
+            return 0.0
         except Exception as e:
-            print(f"⚠️ Shipping extraction error for item: {item.get('title')}")
+            print(f"⚠️ Error extracting shipping from item: {item.get('title')}")
             print(e)
             return 0.0
-        
 
 
     def calculate_profit(item):
         price = float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
-        if shipping == 0:
-            print(f"🔍 Potential missing shipping: {item.get('title')} — {item.get('itemWebUrl')}")
         total_price = price + shipping
         refined_resale = refined_avg_price(item.get("title", ""))
         profit = (refined_resale * 0.85) - total_price
