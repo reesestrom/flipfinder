@@ -305,11 +305,11 @@ def search_ebay(parsed, original_input, postal_code=None):
                 continue
             if not all(term.lower() in title for term in include_terms):
                 continue
-            if shipping is None:
-                continue  # ❌ Skip this item — no usable shipping option
 
             total_price, profit_value, roi, item_price, shipping = calculate_profit(item)
 
+            if shipping is None:
+                continue  # ✅ Skip if no usable shipping info
             if profit_value <= 0:
                 continue
 
@@ -326,6 +326,7 @@ def search_ebay(parsed, original_input, postal_code=None):
             })
 
         return filtered
+
 
     query = parsed["query"]
     condition = parsed.get("condition", "any")
