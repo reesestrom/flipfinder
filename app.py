@@ -11,6 +11,8 @@ import base64
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+message_queue = asyncio.Queue()
 
 ROI_THRESHOLD = 0.1  # Minimum ROI (30%) required for all 5 items
 import traceback
@@ -287,6 +289,7 @@ def search_ebay(parsed, original_input, postal_code=None):
 
 
     def calculate_profit(item):
+        asyncio.create_task(message_queue.put("increment"))
         price = float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
 

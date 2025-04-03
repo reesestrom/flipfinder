@@ -17,7 +17,9 @@ function App() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [loginMessage, setLoginMessage] = useState("");
   const [savedItems, setSavedItems] = useState([]);
-  const [qualifyingCount, setQualifyingCount] = useState(0);
+  const [listingsSearched, setListingsSearched] = useState(0);
+  
+
 
 
   useEffect(() => {
@@ -178,51 +180,55 @@ function App() {
   }
 
   async function handleSearch() {
-    setIsLoading(true);
-    setResults([]);
-    setParsedQueries([]);
-    setQualifyingCount(0); // this now counts completed searches
-  
-    let allResults = [];
-    let parsedSet = [];
-  
-    try {
-      for (let i = 0; i < searchInputs.length; i++) {
-        const query = searchInputs[i];
-        const res = await fetch("https://flipfinder.onrender.com/ai_search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            search: query,
-            postalCode: userZip || "10001"  // ✅ Use ZIP or fallback
-          })          
-        });
-  
-        if (!res.ok) throw new Error("Search failed");
-  
-        const data = await res.json();
-        const parsed = data.parsed;
-        const results = data.results.map(r => ({ ...r, _parsed: parsed }));
-  
-        // ✅ Add results
-        allResults = [...allResults, ...results];
-        parsedSet = [...parsedSet, parsed];
-        setResults([...allResults]);
-        setParsedQueries([...parsedSet]);
-  
-        // ✅ Count each completed search as 1 unit of progress
-        setQualifyingCount(prev => prev + 1);
-  
-        // Let UI re-render
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-    } catch (error) {
-      alert("Error performing one of the searches.");
-      console.error("Search error:", error);
-    } finally {
-      setIsLoading(false);
+  setIsLoading(true);
+  setResults([]);
+  setParsedQueries([]);
+  setListingsSearched(0);
+
+  const evtSource = new EventSource("https://flipfinder.onrender.com/events");
+  evtSource.onmessage = function (event) {
+    if (event.data === "increment") {
+      setListingsSearched(prev => prev + 1);
     }
+  };
+
+  let allResults = [];
+  let parsedSet = [];
+
+  try {
+    for (let i = 0; i < searchInputs.length; i++) {
+      const query = searchInputs[i];
+      const res = await fetch("https://flipfinder.onrender.com/ai_search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          search: query,
+          postalCode: userZip || "10001"
+        })
+      });
+
+      if (!res.ok) throw new Error("Search failed");
+
+      const data = await res.json();
+      const parsed = data.parsed;
+      const results = data.results.map(r => ({ ...r, _parsed: parsed }));
+
+      allResults = [...allResults, ...results];
+      parsedSet = [...parsedSet, parsed];
+      setResults([...allResults]);
+      setParsedQueries([...parsedSet]);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  } catch (error) {
+    alert("Error performing one of the searches.");
+    console.error("Search error:", error);
+  } finally {
+    evtSource.close(); // ✅ Clean up
+    setIsLoading(false);
   }
+}
+
   
   
 
@@ -336,6 +342,12 @@ function App() {
       React.createElement("button", { className: "buttonPrimary", onClick: handleSearch, disabled: isLoading }, "Search")
     ),
     isLoading && React.createElement("div", { className: "loader" }),
+    isLoading && React.createElement("div", {
+      style: { marginTop: "10px", fontSize: "16px", color: "#555" }
+    }, 
+      "Listings searched: ",
+      React.createElement("span", { style: { color: "#4CAF50", fontWeight: "bold" } }, listingsSearched)
+    ),    
     React.createElement("div", { className: "result-box", style: { marginTop: "20px" } },
       React.createElement("h2", null, "Top Resale Opportunities"),
       results.length > 0 ? results.map((item, i) =>
