@@ -307,6 +307,14 @@ def search_ebay(parsed, original_input):
                 "thumbnail": item.get("image", {}).get("imageUrl"),
                 "url": item.get("itemWebUrl")
             })
+            print("🧾 Final listing selected:")
+            print(json.dumps({
+                "title": item.get("title"),
+                "price": item.get("price", {}).get("value"),
+                "shippingOptions": item.get("shippingOptions"),
+                "url": item.get("itemWebUrl")
+            }, indent=2))
+
 
         return filtered
 
