@@ -479,3 +479,15 @@ except Exception as e:
     import traceback
     print("❌ Error running Base.metadata.create_all")
     traceback.print_exc()
+
+from fastapi.responses import StreamingResponse
+
+@app.get("/events")
+async def sse_event_stream():
+    async def event_generator():
+        while True:
+            message = await message_queue.get()
+            yield f"data: {message}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
