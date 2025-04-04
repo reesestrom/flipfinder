@@ -19,6 +19,8 @@ function App() {
   const [loginMessage, setLoginMessage] = useState("");
   const [savedItems, setSavedItems] = useState([]);
   const [listingsSearched, setListingsSearched] = useState(0);
+  const [classicLimitReached, setClassicLimitReached] = useState(false);
+
   
 
 
@@ -32,8 +34,30 @@ function App() {
       setUsername(storedUser);
       setIsAuthenticated(true);
       setUserPreferences(JSON.parse(storedPrefs || "[]"));
-    }
   
+      // 🔁 Load saved auto-searches
+      fetch(`https://flipfinder.onrender.com/user_auto_searches/${storedUser}`)
+        .then(res => res.json())
+        .then(data => {
+          const enabled = data
+            .filter(s => s.auto_search_enabled)
+            .map(s => s.query_text);
+          setAutoSearches(enabled);
+        })
+        .catch(err => console.error("Failed to load auto-searches:", err));
+  
+      // ⭐ Load starred items
+      fetch("https://flipfinder.onrender.com/get_saved_items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: storedUser })
+      })
+        .then(res => res.json())
+        .then(data => {
+          setSavedItems(data.saved_items || []);
+        })
+        .catch(err => console.error("Failed to load saved items:", err));
+    }
     if (storedZip) {
       setUserZip(storedZip);
     } else {
@@ -52,17 +76,26 @@ function App() {
   
   async function toggleAutoSearch(queryText, enable) {
     const endpoint = enable ? "enable_auto_search" : "disable_auto_search";
+  
     try {
       const res = await fetch(`https://flipfinder.onrender.com/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, query_text: queryText })
+        body: JSON.stringify({
+          username,
+          query_text: queryText
+        })
       });
+  
       if (!res.ok) throw new Error("Failed to toggle auto-search");
+  
+      // Optional: log or update UI
+      console.log(`✅ Auto-search ${enable ? "enabled" : "disabled"} for "${queryText}"`);
     } catch (err) {
       console.error("Auto-search toggle failed:", err);
     }
   }
+  
   
 
   async function handleSignupSubmit(e) {
@@ -194,10 +227,13 @@ function App() {
   function addSearchField() {
     if (searchInputs.length >= 3 && !isSubscribed) {
       setShowPaywall(true);
+      setClassicLimitReached(true); // 👈 show message
       return;
     }
     setSearchInputs([...searchInputs, ""]);
+    setClassicLimitReached(false); // 👈 hide message if they add successfully
   }
+  
 
   function removeSearchField(index) {
     const newInputs = [...searchInputs];
@@ -373,6 +409,57 @@ function App() {
           }
         }),
     
+        React.createElement("div", {
+          style: {
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginRight: "8px"
+          }
+        },
+          React.createElement("span", {
+            style: {
+              fontSize: "12px",
+              color: "#555",
+              marginBottom: "4px"
+            }
+          }, "Email Me Deals"),
+          React.createElement("label", {
+            className: "switch",
+            title: "Enable Auto-search"
+          },
+            React.createElement("input", {
+              type: "checkbox",
+              checked: autoSearches.includes(input),
+              onChange: (e) => {
+                const isChecked = e.target.checked;
+              
+                if (isChecked && autoSearches.length >= 3) {
+                  alert("You can only enable up to 3 auto-searches at a time.");
+                  return;
+                }
+              
+                // If user is disabling AND we’re already at the max classic limit → delete it
+                if (!isChecked && searchInputs.length >= 3 && !isSubscribed) {
+                  setAutoSearches(prev => prev.filter(q => q !== input));
+                  setSearchInputs(prev => prev.filter((val, idx) => val !== input || idx !== i));
+                  toggleAutoSearch(input, false);
+                  return;
+                }
+              
+                toggleAutoSearch(input, isChecked);
+                setAutoSearches(prev => {
+                  if (isChecked) {
+                    return [...prev, input];
+                  } else {
+                    return prev.filter(q => q !== input);
+                  }
+                });
+              }              
+            }),
+            React.createElement("span", { className: "slider" })
+          )
+        ),        
         // Auto-search toggle
         React.createElement("label", {
           className: "switch",
@@ -390,10 +477,20 @@ function App() {
                   return prev.filter(q => q !== input);
                 }
               });
-            }
+            }            
           }),
           React.createElement("span", { className: "slider" })
         ),
+        classicLimitReached &&
+        React.createElement("p", {
+          style: {
+            color: "red",
+            fontSize: "14px",
+            marginTop: "-6px",
+            marginBottom: "10px",
+            textAlign: "center"
+          }
+        }, "You’ve reached the maximum of 3 classic searches."),
     
         // Optional "Remove" button if there's more than 1 field
         searchInputs.length > 1 &&
