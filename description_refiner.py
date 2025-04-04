@@ -17,11 +17,12 @@ Given the original product title, description, and condition, your job is to:
    - "seller refurbished"
    - "used"
    - "for parts/not working"
-2. Generate a short resale-focused search query (2-6 words) that accurately reflects the condition and any significant issue or detail (e.g., missing parts, not working, won't turn on) Make sure that information in the title which is relevant (ex. missing part or console only) is included in the new search query.
-3. Do NOT overfit the query. keep it simple. If there is no relevant information in the description or it is empty, do not alter the new simplified search query. If there is information in the description that is already represented in the new search query you may ignore it. For example:
+2. Generate a short resale-focused search query (3-6 words) that accurately reflects the condition and any significant issue or detail (e.g., missing bowl, no controllers, won't turn on) Make sure that information in the title which is relevant (ex. missing part or console only) is included in the new search query.
+3. Do NOT overfit the query. keep it simple, but include important information such as model, size, brand etc. which might have an impact on resale price. If there is no relevant information in the description or it is empty, do not alter the new search query. If there is information in the description that is already represented in the new search query you may ignore it. For example:
    - If a "KitchenAid Mixer" is missing the bowl, say: "KitchenAid mixer missing bowl"
    - If a title says "Play Station 5 console only", and the description says "no controller or cords" the new query can just be "Playstation 5 console only"
-   - If it says "works great", and the condition is already "new", you can ignore that.
+   - If it says "brand new", and the condition is already "new", you can ignore that.
+   - If it says "Only used a couple times" and the condition said "new" change it to "used".
    - If no major issue is found, simplify the original title for a clean search query.
    - Description empty, simplify the original title for a clean search query.
 
