@@ -52,14 +52,27 @@ for user_id, user_snaps in user_map.items():
         print(f"⏩ Skipping {user.username} — no active auto-searches")
         continue
 
+    # Exclude previously emailed snapshots
     emailed_ids = db.query(EmailedSnapshot.snapshot_id).filter_by(user_id=user.id).all()
     emailed_ids = [id for (id,) in emailed_ids]
     fresh_snaps = [snap for snap in user_snaps if snap.id not in emailed_ids]
 
-    print(f"📦 {user.username} has {len(fresh_snaps)} fresh snapshots")
-
+    # Sort by profit
     sorted_snaps = sorted(fresh_snaps, key=lambda x: x.profit, reverse=True)
-    top_5 = sorted_snaps[:5]
+
+    # Remove duplicates by URL
+    seen_urls = set()
+    unique_snaps = []
+    for snap in sorted_snaps:
+        if snap.url in seen_urls:
+            continue
+        seen_urls.add(snap.url)
+        unique_snaps.append(snap)
+        if len(unique_snaps) == 5:
+            break
+
+    top_5 = unique_snaps
+
 
     if not top_5:
         print(f"ℹ️ No top items to send to {user.username}")
@@ -70,21 +83,59 @@ for user_id, user_snaps in user_map.items():
     text_lines = [f"🔍 {s.query_text}\n{s.title}\n{s.url}\nProfit: ${s.profit:.2f}" for s in top_5]
     text_body = "\n\n".join(text_lines)
 
-    html_body = "<h2>Your Flip Finder Deals of the Day</h2><ul>"
+    html_body = """
+    <h2 style='font-family: Arial, sans-serif;'>Your Flip Finder Deals of the Day</h2>
+    <ul style='padding: 0; list-style: none;'>
+    """
     for item in top_5:
         html_body += f"""
-        <li style='padding:10px; margin-bottom:10px; border:1px solid #ccc;'>
-            <img src="{item.thumbnail or ''}" width="100" style="float:left; margin-right:20px;" />
-            <div>
-                <a href="{item.url}" target="_blank">{item.title}</a><br/>
-                <strong>Query:</strong> {item.query_text}<br/>
-                <strong>Price:</strong> ${item.price:.2f} | <strong>Shipping:</strong> ${item.shipping:.2f}<br/>
-                <strong>Profit:</strong> ${item.profit:.2f}
+        <li style='
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 12px;
+            background-color: #ffffff;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            font-family: Arial, sans-serif;
+        '>
+            <img src="{item.thumbnail or ''}" alt="item image" style='
+                width: 110px;
+                height: auto;
+                object-fit: cover;
+                border-radius: 10px;
+                margin-right: 20px;
+                box-shadow: 0 0 4px rgba(0,0,0,0.1);
+            ' />
+            <div style='flex: 1; text-align: left;'>
+                <a href="{item.url}" target="_blank" style='
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #333;
+                    text-decoration: none;
+                '>{item.title}</a>
+                <div style='font-size: 14px; color: #555; margin-top: 6px;'>
+                    🔍 <b>Query:</b> {item.query_text}<br>
+                    💰 <b>Price:</b> ${item.price:.2f} &nbsp;&nbsp;
+                    🚚 <b>Shipping:</b> ${item.shipping:.2f}
+                </div>
+                <div style='
+                    font-size: 24px;
+                    font-weight: bold;
+                    margin-top: 6px;
+                    color: {"#2ecc71" if item.profit >= 0 else "red"};
+                '>
+                    Profit: ${item.profit:.2f}
+                </div>
             </div>
-            <div style="clear:both;"></div>
         </li>
         """
-    html_body += "</ul><p style='font-size:12px;'>To stop receiving these emails, disable Auto-search in your Flip Finder account.</p>"
+    html_body += """
+    </ul>
+    <p style='font-size: 12px; font-family: Arial, sans-serif;'>
+    To stop receiving these emails, disable Auto-search in your Flip Finder account.
+    </p>
+    """
 
     try:
         msg = MIMEMultipart("alternative")
