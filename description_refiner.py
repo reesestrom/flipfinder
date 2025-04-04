@@ -10,24 +10,48 @@ def refine_title_and_condition(title, description, original_condition):
 You are a product analysis assistant for eBay resale.
 
 Given the original product title, description, and condition, your job is to:
-1. Adjust the condition ONLY if the description clearly contradicts the original. Be especially aware of items which say "Read Description" in the title as they usually have a defect and are not working. Choose a condition from this exact list:
-   - "new"
-   - "open box"
-   - "certified refurbished"
-   - "seller refurbished"
-   - "used"
-   - "for parts/not working"
-2. Generate a resale-focused search query that copies the original title but also accurately adds information from the description
-3. In addition to the information provided from the title, include information from the description which might have an impact on resale price. Pay special attention to titles which say something like "read description" as they typically explain what is wrong with an item. Make sure that information in the description which is relevant (ex. missing bowl, console only, or otherwise) is included in the new search query. If there is no relevant information in the description or it is empty, do not alter the new search query. If there is information in the description that is already represented in the new search query you may ignore it.
+1. Adjust the condition if the description reveals a major defect, serious malfunction, or anything that would require repair or make it unsuitable for resale as a working unit. This includes things like:
+   - does not turn off
+   - doesn't power on
+   - stuck on one speed
+   - error codes
+   - damaged parts
+   - broken screens
+   - cannot charge or boot
+If any of these or similar issues are present, change the condition to **"for parts"** even if the original condition says "used".
 
-Here are some example situations:
-   - If the title says "Kitchen Aid Stand Mixer Model #KSM90 With Bowl & Whisk Attachment READ DESC" make sure to **read the description**, if the description says "Tested & working but does not turn off" the new search should be "Kitchen Aid Stand Mixer Model #KSM90 With Bowl & Whisk Attachment does not turn off" and the condition should be "for parts"
-   - If the description for "KitchenAid KSM90 300W Ultra Power Stand Mixer White" says it is is missing the bowl, say: "KitchenAid KSM90 300W Ultra Power Stand Mixer White missing bowl"
-   - If a title says "Play Station 5 console only", and the description says "no controller or cords" the new query can just be "Playstation 5 console only"
-   - If it says "brand new", and the condition is already "new", you can ignore that.
-   - If it says "Only used a couple times" and the condition said "new" change it to "used".
-   - If no major issue is found, simplify the original title for a clean search query.
-   - Description empty, simplify the original title for a clean search query.
+Be especially alert when the title includes phrases like "READ DESC" — this usually means there is an issue explained in the description.
+
+Choose a condition from this exact list:
+  - "new"
+  - "open box"
+  - "certified refurbished"
+  - "seller refurbished"
+  - "used"
+  - "for parts"
+
+2. Generate a resale-focused search query that keeps the useful structure of the original title but also adds important resale-impacting info from the description.
+   - Do not make the title overly long or overly generic.
+   - Only add critical flaws or missing parts.
+
+3. Examples:
+   - TITLE: "Kitchen Aid Stand Mixer Model #KSM90 With Bowl & Whisk Attachment READ DESC"
+     DESCRIPTION: "does not turn off"
+     → refined_query: "Kitchen Aid Stand Mixer KSM90 does not turn off"
+     → adjusted_condition: "for parts"
+
+   - TITLE: "KitchenAid KSM90 300W Ultra Power Stand Mixer White"
+     DESCRIPTION: "missing bowl"
+     → refined_query: "KitchenAid KSM90 Stand Mixer missing bowl"
+     → adjusted_condition: "used"
+
+   - TITLE: "Play Station 5 console only"
+     DESCRIPTION: "no controller or cords"
+     → refined_query: "Play Station 5 console only"
+     → adjusted_condition: "used"
+
+   - If it says "Only used a couple times" and the original condition was "new", downgrade to "used".
+   - If the description is empty or provides no new information, simplify the original title slightly.
 
 Inputs:
 - TITLE: {title}
