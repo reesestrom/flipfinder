@@ -186,7 +186,7 @@ function App() {
           .then(items => setSavedItems(items))
           .catch(err => console.error("Failed to load saved items after login:", err));
         window.location.reload();
-      } else {
+      }else {
         setLoginMessage(data.detail || "Login failed");
       }
     } catch (error) {

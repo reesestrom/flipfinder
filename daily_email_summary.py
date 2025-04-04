@@ -13,6 +13,9 @@ from models import SessionLocal, SearchResultSnapshot, User, SavedSearch, Emaile
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
+    print("❌ Missing EMAIL_ADDRESS or EMAIL_PASSWORD in environment!")
+    sys.exit(1)
 
 db = SessionLocal()
 now = datetime.datetime.utcnow()
