@@ -185,6 +185,7 @@ function App() {
           .then(res => res.json())
           .then(items => setSavedItems(items))
           .catch(err => console.error("Failed to load saved items after login:", err));
+        window.location.reload();
       } else {
         setLoginMessage(data.detail || "Login failed");
       }
