@@ -319,6 +319,20 @@ def refined_avg_price(query, condition=None):
 
 import asyncio
 
+def fetch_item_details(item_id):
+    url = f"https://api.ebay.com/buy/browse/v1/item/{item_id}"
+    headers = {
+        "Authorization": f"Bearer {get_ebay_token()}",
+        "Content-Type": "application/json",
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"⚠️ Failed to fetch item details for {item_id}: {response.status_code}")
+        return {}
+
+
 def search_ebay(parsed, original_input, postal_code=None):
     def run_ebay_search(query, condition, include_terms, exclude_terms, postal_code=None):
         url = "https://api.ebay.com/buy/browse/v1/item_summary/search"
@@ -390,10 +404,8 @@ def search_ebay(parsed, original_input, postal_code=None):
                 loop = asyncio.get_running_loop()
                 loop.create_task(message_queue.put("increment"))
             except RuntimeError:
-                # fallback if no loop is running — do it synchronously
                 asyncio.run(message_queue.put("increment"))
 
-        # Increment the loading progress
         for _ in range(26):
             safe_enqueue_increment()
 
@@ -405,8 +417,11 @@ def search_ebay(parsed, original_input, postal_code=None):
 
         total_price = price + shipping
 
-        # ✅ Use the original item's condition when refining the resale price
-        description = item.get("shortDescription", {}).get("value", "")
+        # ✅ NEW: Fetch full item details for actual description
+        item_id = item.get("itemId", "")
+        full_item = fetch_item_details(item_id)
+        description = full_item.get("description", "")
+
         title = item.get("title", "")
         refinement = refine_title_and_condition(title, description, parsed_condition)
 
@@ -420,7 +435,7 @@ def search_ebay(parsed, original_input, postal_code=None):
 
         return total_price, profit, roi, price, shipping, refined_query, adjusted_condition, description
 
-
+    
 
     def filter_and_score(items, include_terms, exclude_terms):
         filtered = []
