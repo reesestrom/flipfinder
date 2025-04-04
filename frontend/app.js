@@ -20,6 +20,8 @@ function App() {
   const [savedItems, setSavedItems] = useState([]);
   const [listingsSearched, setListingsSearched] = useState(0);
   const [classicLimitReached, setClassicLimitReached] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
+
 
   
 
@@ -323,13 +325,20 @@ function App() {
         alt: "Flip Finder Logo",
         style: {
           width: "500px",
-          marginBottom: "20px"
+          marginBottom: "20px",
+          marginTop: "-275px",
+          marginBottom: "20px",
         }
       }),
-      React.createElement("h2", null, "Your personal resale assistant — discover deals, track profits, and flip goods smarter!"),
+      React.createElement("div", { className: "subtitle" },
+        "Discover deals, track profits, and flip goods"
+      ),      
+      React.createElement("div", { className: "subtitle" },
+        "with your personal resale assistant!"
+      ),      
       React.createElement("form", { onSubmit: handleLoginSubmit, style: { maxWidth: "300px", width: "100%" } },
         ["email", "password"].map((field) =>
-          React.createElement("div", { key: field, style: { marginBottom: "10px" } },
+          React.createElement("div", { key: field, style: { marginBottom: "10px", marginTop: "20px" } },
             React.createElement("input", {
               type: field === "password" ? "password" : "text",
               placeholder: field.charAt(0).toUpperCase() + field.slice(1),
@@ -351,29 +360,47 @@ function App() {
       ),
       React.createElement("div", { style: { marginTop: "20px" } },
         React.createElement("h4", null, "Don't have an account?"),
-        React.createElement("form", { onSubmit: handleSignupSubmit, style: { maxWidth: "300px", width: "100%" } },
-          ["username", "email", "password"].map((field) =>
-            React.createElement("div", { key: field, style: { marginBottom: "10px" } },
-              React.createElement("input", {
-                type: field === "password" ? "password" : "text",
-                placeholder: field.charAt(0).toUpperCase() + field.slice(1),
-                value: signupData[field],
-                required: true,
-                onChange: e => setSignupData({ ...signupData, [field]: e.target.value }),
-                style: {
-                  width: "100%",
-                  padding: "10px",
-                  fontSize: "16px",
-                  border: "1px solid #ccc",
-                  borderRadius: "8px"
-                }
-              })
-            )
-          ),
-          React.createElement("button", { type: "submit", className: "buttonSecondary", style: { width: "100%", padding: "10px" } }, "Sign Up"),
-          signupMessage && React.createElement("p", null, signupMessage)
-        )
-      )
+        !showSignup && React.createElement("button", {
+          type: "button",
+          className: "signup-toggle",
+          onClick: () => setShowSignup(true)
+        }, "Sign Up"),
+        React.createElement("div", {
+          style: { display: "flex", justifyContent: "center", width: "100%" }
+        },
+          React.createElement("form", {
+            onSubmit: handleSignupSubmit,
+            className: `signup-slide ${showSignup ? "show" : ""}`,
+            style: { maxWidth: "350px", width: "100%" }
+          },
+            ["username", "email", "password"].map((field) =>
+              React.createElement("div", { key: field, style: { marginBottom: "10px" } },
+                React.createElement("input", {
+                  type: field === "password" ? "password" : "text",
+                  placeholder: field.charAt(0).toUpperCase() + field.slice(1),
+                  value: signupData[field],
+                  required: true,
+                  onChange: e => setSignupData({ ...signupData, [field]: e.target.value }),
+                  style: {
+                    width: "100%",
+                    padding: "10px",
+                    fontSize: "16px",
+                    border: "1px solid #ccc",
+                    borderRadius: "8px"
+                  }
+                })
+              )
+            ).concat([
+              React.createElement("button", {
+                type: "submit",
+                className: "buttonSecondary",
+                style: { width: "100%", padding: "10px" }
+              }, "Submit"),
+              signupMessage && React.createElement("p", null, signupMessage)
+            ])
+          )
+        )      
+      )      
     );
   }
 
