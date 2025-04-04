@@ -46,18 +46,6 @@ function App() {
           setSearchInputs(enabled.length > 0 ? enabled : [""]); // 👈 this is what was missing
         })
         .catch(err => console.error("Failed to load auto-searches:", err));
-  
-      // ⭐ Load starred items
-      fetch("https://flipfinder.onrender.com/get_saved_items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: storedUser })
-      })
-        .then(res => res.json())
-        .then(data => {
-          setSavedItems(data.saved_items || []);
-        })
-        .catch(err => console.error("Failed to load saved items:", err));
     }
     if (storedZip) {
       setUserZip(storedZip);
@@ -73,6 +61,22 @@ function App() {
         .catch(err => console.warn("Could not get ZIP from geolocation:", err));
     }
   }, []);
+ 
+  useEffect(() => {
+    if (!username) return;
+  
+    fetch("https://flipfinder.onrender.com/get_saved_items", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setSavedItems(data.saved_items || []);
+      })
+      .catch(err => console.error("Failed to load saved items:", err));
+  }, [username]);
+  
   
   
   async function toggleAutoSearch(queryText, enable) {
