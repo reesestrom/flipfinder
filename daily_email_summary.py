@@ -6,6 +6,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from models import SessionLocal, SearchResultSnapshot, User, SavedSearch, EmailedListing
+from urllib.parse import urlparse, urlunparse
 
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -13,6 +14,11 @@ load_dotenv()
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+
+def clean_url(url):
+    parsed = urlparse(url)
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', '', ''))
+
 
 if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
     print("❌ Missing EMAIL_ADDRESS or EMAIL_PASSWORD in environment!")
@@ -48,22 +54,24 @@ for user_id, user_snaps in user_map.items():
 
     # Skip users with no active auto-searches
     active_searches = db.query(SavedSearch).filter_by(user_id=user.id, auto_search_enabled=True).all()
+    active_queries = {s.query_text for s in active_searches}
+    user_snaps = [snap for snap in user_snaps if snap.query_text in active_queries]
     if not active_searches:
         print(f"⏩ Skipping {user.username} — no active auto-searches")
         continue
 
-    emailed_urls = db.query(EmailedListing.url).filter_by(user_id=user.id).all()
-    emailed_urls = {url for (url,) in emailed_urls}
+    emailed_urls_raw = db.query(EmailedListing.url).filter_by(user_id=user.id).all()
+    emailed_urls = {clean_url(url) for (url,) in emailed_urls_raw}
+
 
     url_to_best_snapshot = {}
     for snap in user_snaps:
-        if snap.url in emailed_urls:
+        url_key = clean_url(snap.url)
+        if url_key in emailed_urls:
             continue
-        # Optional: still keep snapshot_id filter if you're tracking those
-        #if snap.id in emailed_ids:
-        #    continue
-        if snap.url not in url_to_best_snapshot or snap.profit > url_to_best_snapshot[snap.url].profit:
-            url_to_best_snapshot[snap.url] = snap
+        if url_key not in url_to_best_snapshot or snap.profit > url_to_best_snapshot[url_key].profit:
+            url_to_best_snapshot[url_key] = snap
+
 
     sorted_unique_snaps = sorted(url_to_best_snapshot.values(), key=lambda x: x.profit, reverse=True)
     top_5 = sorted_unique_snaps[:5]
@@ -152,7 +160,7 @@ for user_id, user_snaps in user_map.items():
         # Save emailed snapshot records
         print(f"📝 Logging sent snapshots...")
         for snap in top_5:
-            db.add(EmailedListing(user_id=user.id, url=snap.url))
+            db.add(EmailedListing(user_id=user.id, url=clean_url(snap.url)))
         db.commit()
 
         print(f"🗑 Deleting today's snapshots...")
