@@ -123,18 +123,23 @@ for user_id, user_snaps in user_map.items():
 
         print(f"\u2705 Email sent to {user.email}")
 
-        # ✅ Log emailed snapshots so they never get sent again
+        # ✅ Save emailed snapshot records first
         for snap in top_5:
             record = EmailedSnapshot(user_id=user.id, snapshot_id=snap.id)
             db.add(record)
 
-        # ✅ Delete all today's snapshots for this user
+        db.commit()  # Save EmailedSnapshots first to preserve snapshot_ids
+
+        # ✅ THEN delete today's snapshots
         db.query(SearchResultSnapshot).filter(
             SearchResultSnapshot.user_id == user.id,
             SearchResultSnapshot.created_at >= start_of_day
         ).delete()
 
         db.commit()
+        print(f"📨 Logged {len(top_5)} emailed snapshots for {user.username}")
+
+
 
     except Exception as e:
         print(f"\u274c Failed to send email to {user.email}: {e}")
