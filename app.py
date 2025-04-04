@@ -418,7 +418,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         profit = (refined_resale * 0.85) - total_price
         roi = round(profit / total_price, 2) if total_price > 0 else 0
 
-        return total_price, profit, roi, price, shipping, refined_query, adjusted_condition
+        return total_price, profit, roi, price, shipping, refined_query, adjusted_condition, description
 
 
 
@@ -436,7 +436,8 @@ def search_ebay(parsed, original_input, postal_code=None):
             if result is None:
                 continue  # ❌ skip bad shipping items
 
-            total_price, profit_value, roi, item_price, shipping, refined_query, adjusted_condition = result
+            total_price, profit_value, roi, item_price, shipping, refined_query, adjusted_condition, description = result
+
 
             if shipping is None:
                 continue  # ✅ Skip if no usable shipping info
@@ -447,6 +448,7 @@ def search_ebay(parsed, original_input, postal_code=None):
                 "title": item.get("title"),
                 "price": total_price,
                 "item_price": item_price,
+                "description": description,
                 "shipping": shipping,
                 "profit": profit_value,
                 "roi": roi,
