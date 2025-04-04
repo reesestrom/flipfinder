@@ -74,11 +74,11 @@ class SearchResultSnapshot(Base):
 
 
 # ✅ New model to track emailed snapshots and prevent re-sending
-class EmailedSnapshot(Base):
-    __tablename__ = "emailed_snapshots"
+class EmailedListing(Base):
+    __tablename__ = "emailed_listings"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    snapshot_id = Column(Integer, ForeignKey("search_result_snapshots.id"))
+    url = Column(String, index=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 

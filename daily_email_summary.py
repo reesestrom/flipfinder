@@ -5,11 +5,11 @@ from dotenv import load_dotenv
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from models import SessionLocal, SearchResultSnapshot, User, SavedSearch, EmailedListing
+
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv()
-
-from models import SessionLocal, SearchResultSnapshot, User, SavedSearch, EmailedSnapshot
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -52,22 +52,22 @@ for user_id, user_snaps in user_map.items():
         print(f"⏩ Skipping {user.username} — no active auto-searches")
         continue
 
-    # Exclude already-emailed snapshot IDs
-    emailed_ids = db.query(EmailedSnapshot.snapshot_id).filter_by(user_id=user.id).all()
-    emailed_ids = {id for (id,) in emailed_ids}
+    emailed_urls = db.query(EmailedListing.url).filter_by(user_id=user.id).all()
+    emailed_urls = {url for (url,) in emailed_urls}
 
-    # ✅ Build a map of best snapshot per URL
     url_to_best_snapshot = {}
     for snap in user_snaps:
+        if snap.url in emailed_urls:
+            continue
+        # Optional: still keep snapshot_id filter if you're tracking those
         if snap.id in emailed_ids:
             continue
-        # Only keep the most profitable version of each URL
         if snap.url not in url_to_best_snapshot or snap.profit > url_to_best_snapshot[snap.url].profit:
             url_to_best_snapshot[snap.url] = snap
 
-    # ✅ Take the top 5 unique listings
     sorted_unique_snaps = sorted(url_to_best_snapshot.values(), key=lambda x: x.profit, reverse=True)
     top_5 = sorted_unique_snaps[:5]
+
 
 
 
@@ -152,8 +152,7 @@ for user_id, user_snaps in user_map.items():
         # Save emailed snapshot records
         print(f"📝 Logging sent snapshots...")
         for snap in top_5:
-            record = EmailedSnapshot(user_id=user.id, snapshot_id=snap.id)
-            db.add(record)
+            db.add(EmailedListing(user_id=user.id, url=snap.url))
         db.commit()
 
         print(f"🗑 Deleting today's snapshots...")
