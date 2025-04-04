@@ -322,11 +322,11 @@ function App() {
         src: "assets/flip finder logo.png",
         alt: "Flip Finder Logo",
         style: {
-          width: "150px",
+          width: "500px",
           marginBottom: "20px"
         }
       }),
-      React.createElement("h2", null, "Welcome to Flip Finder"),
+      React.createElement("h2", null, "Your personal resale assistant — discover deals, track profits, and flip goods smarter!"),
       React.createElement("form", { onSubmit: handleLoginSubmit, style: { maxWidth: "300px", width: "100%" } },
         ["email", "password"].map((field) =>
           React.createElement("div", { key: field, style: { marginBottom: "10px" } },
@@ -578,14 +578,32 @@ function App() {
                           )
           ),
           React.createElement("div", {
-            className: "profit",
             style: {
-              color: item.profit_color === "red" ? "red" : "#2ecc71",
-              fontSize: "36px",
-              fontWeight: "bold",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
               marginLeft: "10px"
             }
-          }, `$${item.profit.toFixed(2)}`)
+          }, [
+            React.createElement("span", {
+              key: "label",
+              style: {
+                fontSize: "12px",
+                fontWeight: "bold",
+                color: "#888",
+                marginBottom: "4px"
+              }
+            }, "Potential Profit"),
+            React.createElement("span", {
+              key: "value",
+              className: "profit",
+              style: {
+                color: item.profit >= 0 ? "#2ecc71" : "red",
+                fontSize: "24px",
+                fontWeight: "bold"
+              }
+            }, `$${item.profit.toFixed(2)}`)
+          ]),          
         )
       ) : React.createElement("p", null, "No results yet."),
       React.createElement("div", { className: "saved-box", style: { marginTop: "60px" } },
@@ -636,14 +654,32 @@ function App() {
                                       )
                 ),
                 React.createElement("div", {
-                  className: "profit",
                   style: {
-                    color: item.profit >= 0 ? "#2ecc71" : "red",
-                    fontSize: "24px",
-                    fontWeight: "bold",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
                     marginLeft: "10px"
                   }
-                }, `$${item.profit.toFixed(2)}`),
+                }, [
+                  React.createElement("span", {
+                    key: "label",
+                    style: {
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      color: "#888",
+                      marginBottom: "4px"
+                    }
+                  }, "Potential Profit"),
+                  React.createElement("span", {
+                    key: "value",
+                    className: "profit",
+                    style: {
+                      color: item.profit >= 0 ? "#2ecc71" : "red",
+                      fontSize: "24px",
+                      fontWeight: "bold"
+                    }
+                  }, `$${item.profit.toFixed(2)}`)
+                ]),                
                 React.createElement("button", {
                   onClick: () => toggleSaveItem(item),
                   style: {

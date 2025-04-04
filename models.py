@@ -22,7 +22,6 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
 
-
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -37,6 +36,7 @@ class User(Base):
     def set_password(self, password: str):
         self.hashed_password = pwd_context.hash(password)
 
+
 class SavedItem(Base):
     __tablename__ = "saved_items"
     id = Column(Integer, primary_key=True, index=True)
@@ -48,9 +48,9 @@ class SavedItem(Base):
     thumbnail = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+
 class SavedSearch(Base):
     __tablename__ = "saved_searches"
-
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     query_text = Column(String)
@@ -58,9 +58,9 @@ class SavedSearch(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     last_run = Column(DateTime, nullable=True)
 
+
 class SearchResultSnapshot(Base):
     __tablename__ = "search_result_snapshots"
-
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     query_text = Column(String)
@@ -71,5 +71,15 @@ class SearchResultSnapshot(Base):
     shipping = Column(Float)
     profit = Column(Float)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+# ✅ New model to track emailed snapshots and prevent re-sending
+class EmailedSnapshot(Base):
+    __tablename__ = "emailed_snapshots"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    snapshot_id = Column(Integer, ForeignKey("search_result_snapshots.id"))
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 Base.metadata.create_all(bind=engine)

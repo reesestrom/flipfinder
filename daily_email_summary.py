@@ -9,15 +9,14 @@ from email.mime.multipart import MIMEMultipart
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv()
 
-from models import SessionLocal, SearchResultSnapshot, User
+from models import SessionLocal, SearchResultSnapshot, User, SavedSearch, EmailedSnapshot  # ✅ Added EmailedSnapshot
 
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 db = SessionLocal()
 now = datetime.datetime.utcnow()
-
-print("📬 Sending daily Flip Finder summary emails...")
+print("\ud83d\udcec Sending daily Flip Finder summary emails...")
 
 # Get all snapshots from today
 start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -35,17 +34,28 @@ for user_id, user_snaps in user_map.items():
     if not user:
         continue
 
-    # Sort by profit and pick top 5
-    sorted_snaps = sorted(user_snaps, key=lambda x: x.profit, reverse=True)
+    # ✅ Skip users with no active auto-searches
+    active_searches = db.query(SavedSearch).filter_by(user_id=user.id, auto_search_enabled=True).all()
+    if not active_searches:
+        print(f"\u23e9 Skipping {user.username} — no active auto-searches")
+        continue
+
+    # ✅ Exclude previously emailed snapshots
+    emailed_ids = db.query(EmailedSnapshot.snapshot_id).filter_by(user_id=user.id).all()
+    emailed_ids = [id for (id,) in emailed_ids]
+    fresh_snaps = [snap for snap in user_snaps if snap.id not in emailed_ids]
+
+    # Sort and limit
+    sorted_snaps = sorted(fresh_snaps, key=lambda x: x.profit, reverse=True)
     top_5 = sorted_snaps[:5]
 
     if not top_5:
         continue
 
-    print(f"📤 Preparing email for {user.username} ({user.email}) with top {len(top_5)} items")
+    print(f"\ud83d\udce4 Preparing email for {user.username} ({user.email}) with top {len(top_5)} items")
 
     # Plain text fallback
-    text_lines = [f"🔍 {s.query_text}\n{s.title}\n{s.url}\nProfit: ${s.profit:.2f}" for s in top_5]
+    text_lines = [f"\ud83d\udd0d {s.query_text}\n{s.title}\n{s.url}\nProfit: ${s.profit:.2f}" for s in top_5]
     text_body = "\n\n".join(text_lines)
 
     # HTML version
@@ -62,7 +72,7 @@ for user_id, user_snaps in user_map.items():
             box-shadow: 0 4px 8px rgba(0,0,0,0.05);
             font-family: Arial, sans-serif;
         '>
-            <img src="{item.thumbnail or ''}" alt="item image" style='
+            <img src=\"{item.thumbnail or ''}\" alt=\"item image\" style='
                 width: 110px;
                 height: auto;
                 object-fit: cover;
@@ -71,16 +81,16 @@ for user_id, user_snaps in user_map.items():
                 box-shadow: 0 0 4px rgba(0,0,0,0.1);
             ' />
             <div style='flex: 1; text-align: left;'>
-                <a href="{item.url}" target="_blank" style='
+                <a href=\"{item.url}\" target=\"_blank\" style='
                     font-size: 16px;
                     font-weight: bold;
                     color: #333;
                     text-decoration: none;
                 '>{item.title}</a>
                 <div style='font-size: 14px; color: #555; margin-top: 6px;'>
-                    🔍 <b>Query:</b> {item.query_text}<br>
-                    💵 <b>Price:</b> ${item.price:.2f} &nbsp;&nbsp;
-                    📦 <b>Shipping:</b> ${item.shipping:.2f}
+                    \ud83d\udd0d <b>Query:</b> {item.query_text}<br>
+                    \ud83d\udcb5 <b>Price:</b> ${item.price:.2f} &nbsp;&nbsp;
+                    \ud83d\ude9e <b>Shipping:</b> ${item.shipping:.2f}
                 </div>
                 <div style='
                     font-size: 24px;
@@ -97,7 +107,7 @@ for user_id, user_snaps in user_map.items():
 
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "📦 Your Flip Finder Deals of the Day"
+        msg["Subject"] = "\ud83d\ude9e Your Flip Finder Deals of the Day"
         msg["From"] = EMAIL_ADDRESS
         msg["To"] = user.email
 
@@ -108,25 +118,24 @@ for user_id, user_snaps in user_map.items():
             server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
             server.sendmail(EMAIL_ADDRESS, user.email, msg.as_string())
 
-        print(f"✅ Email sent to {user.email}")
+        print(f"\u2705 Email sent to {user.email}")
+
+        # ✅ Log emailed snapshots so they never get sent again
+        for snap in top_5:
+            record = EmailedSnapshot(user_id=user.id, snapshot_id=snap.id)
+            db.add(record)
+
+        # ✅ Delete all today's snapshots for this user
+        db.query(SearchResultSnapshot).filter(
+            SearchResultSnapshot.user_id == user.id,
+            SearchResultSnapshot.created_at >= start_of_day
+        ).delete()
+
+        db.commit()
 
     except Exception as e:
-        print(f"❌ Failed to send email to {user.email}: {e}")
-
-# Delete all of today's other results for this user (excluding the top 5)
-top_ids = [snap.id for snap in top_5]
-to_delete = db.query(SearchResultSnapshot).filter(
-    SearchResultSnapshot.user_id == user.id,
-    SearchResultSnapshot.created_at >= start_of_day,
-    ~SearchResultSnapshot.id.in_(top_ids)
-).all()
-
-for snap in to_delete:
-    db.delete(snap)
-
-db.commit()
-print(f"🧹 Deleted {len(to_delete)} extra snapshots for {user.email}")
+        print(f"\u274c Failed to send email to {user.email}: {e}")
 
 
 db.close()
-print("✅ All emails processed.")
+print("\u2705 All emails processed.")
