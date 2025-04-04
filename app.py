@@ -10,7 +10,6 @@ import time
 import base64
 import os
 from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 message_queue = asyncio.Queue()
 import datetime
