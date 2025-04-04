@@ -14,6 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 message_queue = asyncio.Queue()
 import datetime
+from auto_search import auto_search_bp
+
+
 
 def log_event(event_type: str, details: str):
     timestamp = datetime.datetime.now().isoformat()
@@ -25,12 +28,14 @@ ROI_THRESHOLD = 0.1  # Minimum ROI (30%) required for all 5 items
 import traceback
 import re
 load_dotenv()
-print("🔑 OpenAI API Key:", os.getenv("OPENAI_API_KEY"))
+#print("🔑 OpenAI API Key:", os.getenv("OPENAI_API_KEY"))
 
 from models import Base, User, SavedItem, SessionLocal, engine
 from sqlalchemy.orm import Session
 
 app = FastAPI()
+
+app.include_router(auto_search_bp)
 
 app.add_middleware(
     CORSMiddleware,

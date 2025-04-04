@@ -1,10 +1,10 @@
 fastapi
-uvicorn
-sqlalchemy
-psycopg2-binary
-pydantic[email]
-requests
-python-dotenv
 openai
 passlib
+psycopg2-binary
+pydantic[email]
+python-dotenv
+requests
+sqlalchemy
 sse-starlette
+uvicorn

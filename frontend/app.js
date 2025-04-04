@@ -1,5 +1,6 @@
 // Full Flip Finder app with login and post-login search functionality
 const { useState, useEffect } = React;
+const [autoSearches, setAutoSearches] = useState([]);
 
 function App() {
   const [searchInputs, setSearchInputs] = useState([""]);
@@ -110,6 +111,16 @@ function App() {
         setUsername(data.username);
         setIsAuthenticated(true);
         localStorage.setItem("user", data.username);
+        // ⬇️ Fetch auto-searches
+        fetch(`https://flipfinder.onrender.com/user_auto_searches/${data.username}`)
+          .then(res => res.json())
+          .then(searches => {
+            const enabled = searches
+              .filter(s => s.auto_search_enabled)
+              .map(s => s.query_text);
+            setAutoSearches(enabled);
+          })
+          .catch(err => console.error("Failed to load auto searches:", err));
   
         // ⬇️ Fetch saved listings for this user and store in state
         fetch(`https://flipfinder.onrender.com/saved_items/${data.username}`)
@@ -142,6 +153,7 @@ function App() {
       console.error("Failed to save item:", err);
     }
   }
+  
   
 
   function handleLogOut() {
@@ -494,7 +506,32 @@ function App() {
                     color: "gold",
                     marginLeft: "10px"
                   }
-                }, "★")
+                }, "★"),
+                React.createElement("label", {
+                  style: {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "14px",
+                    marginLeft: "10px"
+                  }
+                },
+                  "Auto-search",
+                  React.createElement("input", {
+                    type: "checkbox",
+                    checked: autoSearches.includes(item.title),
+                    onChange: (e) => {
+                      toggleAutoSearch(item.title, e.target.checked);
+                      setAutoSearches(prev => {
+                        if (e.target.checked) {
+                          return [...prev, item.title];
+                        } else {
+                          return prev.filter(q => q !== item.title);
+                        }
+                      });
+                    }
+                  })
+                )                
               )
             )
           : React.createElement("p", null, "You haven't saved any listings yet.")
