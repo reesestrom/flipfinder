@@ -443,9 +443,9 @@ function App() {
               onChange: async (e) => {
                 const isChecked = e.target.checked;
               
-                if (isChecked && autoSearches.length >= 3) {
-                  alert("You can only enable up to 3 auto-searches at a time.");
-                  return;
+                // HARD LIMIT: Don't add more than 3
+                if (isChecked && autoSearches.length > 3) {
+                  return; // silently ignore
                 }
               
                 await toggleAutoSearch(input, isChecked);
@@ -457,7 +457,8 @@ function App() {
                     return prev.filter(q => q !== input);
                   }
                 });
-              }              
+              }
+                         
             }),
             React.createElement("span", { className: "slider" })
           )          
