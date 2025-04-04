@@ -60,8 +60,8 @@ for user_id, user_snaps in user_map.items():
         if snap.url in emailed_urls:
             continue
         # Optional: still keep snapshot_id filter if you're tracking those
-        if snap.id in emailed_ids:
-            continue
+        #if snap.id in emailed_ids:
+        #    continue
         if snap.url not in url_to_best_snapshot or snap.profit > url_to_best_snapshot[snap.url].profit:
             url_to_best_snapshot[snap.url] = snap
 
