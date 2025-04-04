@@ -91,6 +91,7 @@ function App() {
   
       // Optional: log or update UI
       console.log(`✅ Auto-search ${enable ? "enabled" : "disabled"} for "${queryText}"`);
+      print(`✅ Auto-search ${enable ? "enabled" : "disabled"} for "${queryText}"`);
     } catch (err) {
       console.error("Auto-search toggle failed:", err);
     }
