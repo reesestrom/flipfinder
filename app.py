@@ -146,6 +146,25 @@ def save_item(data: dict = Body(...), db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Item saved successfully"}
 
+@app.post("/unsave_item")
+def unsave_item(data: dict = Body(...), db: Session = Depends(get_db)):
+    username = data.get("username")
+    item = data.get("item")
+
+    if not username or not item:
+        raise HTTPException(status_code=400, detail="Missing username or item")
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Delete saved item by URL
+    deleted = db.query(SavedItem).filter_by(user_id=user.id, url=item["url"]).delete()
+    db.commit()
+
+    return {"message": "Item unsaved", "deleted_count": deleted}
+
+
 @app.get("/saved_items/{username}")
 def get_saved_items(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()

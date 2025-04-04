@@ -199,16 +199,19 @@ function App() {
   
     setSavedItems(updated);
   
+    const endpoint = alreadySaved ? "unsave_item" : "save_item";
+  
     try {
-      await fetch("https://flipfinder.onrender.com/save_item", {
+      await fetch(`https://flipfinder.onrender.com/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, item })
       });
     } catch (err) {
-      console.error("Failed to save item:", err);
+      console.error(`Failed to ${alreadySaved ? "unsave" : "save"} item:`, err);
     }
   }
+  
   
   
 
