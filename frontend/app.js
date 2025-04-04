@@ -410,13 +410,25 @@ function App() {
           type: "text",
           placeholder: "Enter search like: 'Macbook Pro used'",
           value: input,
-          onChange: e => handleInputChange(i, e.target.value),
+          onChange: async (e) => {
+            const oldQuery = searchInputs[i];
+            const newQuery = e.target.value;
+        
+            if (autoSearches.includes(oldQuery)) {
+              setAutoSearches(prev => prev.filter(q => q !== oldQuery));
+              await toggleAutoSearch(oldQuery, false);
+            }
+        
+            const newInputs = [...searchInputs];
+            newInputs[i] = newQuery;
+            setSearchInputs(newInputs);
+          },
           style: {
             flex: 1,
             padding: "10px",
             fontSize: "16px"
           }
-        }),
+        }),        
     
         React.createElement("div", {
           style: {
