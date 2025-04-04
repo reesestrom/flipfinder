@@ -183,6 +183,22 @@ def get_saved_items(username: str, db: Session = Depends(get_db)):
             "url": item.url
         } for item in items
     ]
+@app.get("/saved_searches/{username}")
+def get_saved_searches(username: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    searches = db.query(SavedSearch).filter(SavedSearch.user_id == user.id).all()
+
+    return [
+        {
+            "query_text": s.query_text,
+            "auto_search_enabled": s.auto_search_enabled,
+            "created_at": s.created_at.isoformat()
+        } for s in searches
+    ]
+
 @app.post("/log_click")
 def log_click(data: dict):
     url = data.get("url", "UNKNOWN")

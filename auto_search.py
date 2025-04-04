@@ -26,6 +26,29 @@ def debug_saved_searches(username: str, db: Session = Depends(get_db)):
     ]
 
 
+@auto_search_bp.post("/remove_search_and_disable_auto")
+def remove_search_and_disable_auto(data: dict = Body(...), db: Session = Depends(get_db)):
+    username = data.get("username")
+    query_text = data.get("query_text")
+
+    if not username or not query_text:
+        raise HTTPException(status_code=400, detail="Missing username or query_text")
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    search = db.query(SavedSearch).filter_by(user_id=user.id, query_text=query_text).first()
+    if not search:
+        raise HTTPException(status_code=404, detail="Search not found")
+
+    search.auto_search_enabled = False
+    db.delete(search)
+    db.commit()
+
+    return {"message": "Search removed and auto-search disabled"}
+
+
 @auto_search_bp.post("/enable_auto_search")
 def enable_auto_search(data: dict = Body(...), db: Session = Depends(get_db)):
     username = data.get("username")

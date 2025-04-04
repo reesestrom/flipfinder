@@ -251,9 +251,30 @@ function App() {
 
   function removeSearchField(index) {
     const newInputs = [...searchInputs];
+    const removedSearch = newInputs[index]; // Get the search being removed
     newInputs.splice(index, 1);
     setSearchInputs(newInputs);
+  
+    // 🔁 Call backend to delete the saved search and disable auto-search
+    fetch("https://flipfinder.onrender.com/remove_search_and_disable_auto", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username: currentUser, // replace this with your actual user variable
+        query_text: removedSearch.query
+      })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("✅ Backend removed saved search:", data);
+      })
+      .catch((err) => {
+        console.error("❌ Error removing saved search:", err);
+      });
   }
+  
 
   async function handleSearch() {
   setIsLoading(true);
