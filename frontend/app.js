@@ -468,11 +468,11 @@ function App() {
           style: {
             color: "red",
             fontSize: "14px",
-            marginTop: "-6px",
+            marginTop: "6px",
             marginBottom: "10px",
             textAlign: "center"
           }
-        }, "You’ve reached the maximum of 3 classic searches."),
+        }, "You’ve reached the maximum of 3 searches."),
     
         // Optional "Remove" button if there's more than 1 field
         searchInputs.length > 1 &&
