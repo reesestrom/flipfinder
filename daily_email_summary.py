@@ -52,26 +52,23 @@ for user_id, user_snaps in user_map.items():
         print(f"⏩ Skipping {user.username} — no active auto-searches")
         continue
 
-    # Exclude previously emailed snapshots
+    # Exclude already-emailed snapshot IDs
     emailed_ids = db.query(EmailedSnapshot.snapshot_id).filter_by(user_id=user.id).all()
-    emailed_ids = [id for (id,) in emailed_ids]
-    fresh_snaps = [snap for snap in user_snaps if snap.id not in emailed_ids]
+    emailed_ids = {id for (id,) in emailed_ids}
 
-    # Sort by profit
-    sorted_snaps = sorted(fresh_snaps, key=lambda x: x.profit, reverse=True)
-
-    # Remove duplicates by URL
-    seen_urls = set()
-    unique_snaps = []
-    for snap in sorted_snaps:
-        if snap.url in seen_urls:
+    # ✅ Build a map of best snapshot per URL
+    url_to_best_snapshot = {}
+    for snap in user_snaps:
+        if snap.id in emailed_ids:
             continue
-        seen_urls.add(snap.url)
-        unique_snaps.append(snap)
-        if len(unique_snaps) == 5:
-            break
+        # Only keep the most profitable version of each URL
+        if snap.url not in url_to_best_snapshot or snap.profit > url_to_best_snapshot[snap.url].profit:
+            url_to_best_snapshot[snap.url] = snap
 
-    top_5 = unique_snaps
+    # ✅ Take the top 5 unique listings
+    sorted_unique_snaps = sorted(url_to_best_snapshot.values(), key=lambda x: x.profit, reverse=True)
+    top_5 = sorted_unique_snaps[:5]
+
 
 
     if not top_5:
