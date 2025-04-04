@@ -18,7 +18,7 @@ Given the original product title, description, and condition, your job is to:
    - "used"
    - "for parts/not working"
 2. Generate a resale-focused search query that copies the original title but also accurately adds information from the description
-3. In addition to the information provided from the title, include information from the description which might have an impact on resale price. Make sure that information in the description which is relevant (ex. missing bowl, console only, or otherwise) is included in the new search query. If there is no relevant information in the description or it is empty, do not alter the new search query. If there is information in the description that is already represented in the new search query you may ignore it.
+3. In addition to the information provided from the title, include information from the description which might have an impact on resale price. Pay special attention to titles which say something like "read description" as they typically explain what is wrong with an item. Make sure that information in the description which is relevant (ex. missing bowl, console only, or otherwise) is included in the new search query. If there is no relevant information in the description or it is empty, do not alter the new search query. If there is information in the description that is already represented in the new search query you may ignore it.
 
 Here are some example situations:
    - If the description for "KitchenAid KSM90 300W Ultra Power Stand Mixer White" says it is is missing the bowl, say: "KitchenAid KSM90 300W Ultra Power Stand Mixer White missing bowl"
