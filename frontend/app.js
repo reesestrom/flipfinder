@@ -65,17 +65,14 @@ function App() {
   useEffect(() => {
     if (!username) return;
   
-    fetch("https://flipfinder.onrender.com/get_saved_items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username })
-    })
+    fetch(`https://flipfinder.onrender.com/saved_items/${username}`)
       .then(res => res.json())
       .then(data => {
-        setSavedItems(data.saved_items || []);
+        setSavedItems(data || []);
       })
       .catch(err => console.error("Failed to load saved items:", err));
   }, [username]);
+  
   
   
   
