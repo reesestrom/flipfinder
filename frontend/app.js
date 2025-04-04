@@ -1,8 +1,8 @@
 // Full Flip Finder app with login and post-login search functionality
 const { useState, useEffect } = React;
-const [autoSearches, setAutoSearches] = useState([]);
 
 function App() {
+  const [autoSearches, setAutoSearches] = useState([]);
   const [searchInputs, setSearchInputs] = useState([""]);
   const [results, setResults] = useState([]);
   const [parsedQueries, setParsedQueries] = useState([]);
