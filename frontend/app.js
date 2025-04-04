@@ -432,37 +432,20 @@ function App() {
               type: "checkbox",
               checked: autoSearches.includes(input),
               onChange: (e) => {
-                toggleAutoSearch(input, e.target.checked);
-                setAutoSearches(prev => {
-                  if (e.target.checked) {
-                    return [...prev, input];
-                  } else {
-                    return prev.filter(q => q !== input);
-                  }
-                });
-              }            
-            }),
-            React.createElement("span", { className: "slider" })
-          ), 
-          React.createElement("input", {
-              type: "checkbox",
-              checked: autoSearches.includes(input),
-              onChange: (e) => {
                 const isChecked = e.target.checked;
-              
+          
                 if (isChecked && autoSearches.length >= 3) {
                   alert("You can only enable up to 3 auto-searches at a time.");
                   return;
                 }
-              
-                // If user is disabling AND we’re already at the max classic limit → delete it
+          
                 if (!isChecked && searchInputs.length >= 3 && !isSubscribed) {
                   setAutoSearches(prev => prev.filter(q => q !== input));
                   setSearchInputs(prev => prev.filter((val, idx) => val !== input || idx !== i));
                   toggleAutoSearch(input, false);
                   return;
                 }
-              
+          
                 toggleAutoSearch(input, isChecked);
                 setAutoSearches(prev => {
                   if (isChecked) {
@@ -471,9 +454,10 @@ function App() {
                     return prev.filter(q => q !== input);
                   }
                 });
-              }              
+              }
             }),
             React.createElement("span", { className: "slider" })
+          )          
         ),
         classicLimitReached &&
         React.createElement("p", {
