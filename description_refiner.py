@@ -17,9 +17,10 @@ Given the original product title, description, and condition, your job is to:
    - "seller refurbished"
    - "used"
    - "for parts/not working"
-2. Generate a short resale-focused search query (2-6 words) that accurately reflects the condition and any significant issue (e.g., missing parts, not working).
-3. Do NOT overfit the query. Keep it simple, and if you are unsure, coose to make the search more broad. If there is no relevant information in the query or it is empty, do not alter the search query. For example:
+2. Generate a short resale-focused search query (2-6 words) that accurately reflects the condition and any significant issue (e.g., missing parts, not working) Make sure that information in the title which is relevant (ex. missing part or console onle) are included in the new search query.
+3. Do NOT overfit the query. keep it simple. If there is no relevant information in the description or it is empty, do not alter the new simplified search query. If there is information in the description that is already represented in the new search query you may ignore it. For example:
    - If a "KitchenAid Mixer" is missing the bowl, say: "KitchenAid mixer missing bowl"
+   - If a title says "Play Station 5 console only", and the description says "no controller or cords" the new query can just be "Playstation 5 console only"
    - If it says "works great", and the condition is already "new", you can ignore that.
    - If no major issue is found, simplify the original title for a clean search query.
    - Description empty, simplify the original title for a clean search query.
