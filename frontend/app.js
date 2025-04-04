@@ -75,7 +75,7 @@ function App() {
   
   
   async function toggleAutoSearch(queryText, enable) {
-    const endpoint = enable ? "enable_auto_search" : "disable_auto_search";
+    const endpoint = enable ? "enable_auto_search" : "delete_saved_search";
   
     try {
       const res = await fetch(`https://flipfinder.onrender.com/${endpoint}`, {
@@ -87,14 +87,14 @@ function App() {
         })
       });
   
-      if (!res.ok) throw new Error("Failed to toggle auto-search");
+      if (!res.ok) throw new Error(`Failed to ${enable ? "enable" : "delete"} auto-search`);
   
-      // Optional: log or update UI
-      console.log(`✅ Auto-search ${enable ? "enabled" : "disabled"} for "${queryText}"`);
+      console.log(`✅ Auto-search ${enable ? "enabled" : "deleted"} for "${queryText}"`);
     } catch (err) {
       console.error("Auto-search toggle failed:", err);
     }
   }
+  
   
   
 
