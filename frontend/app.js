@@ -43,6 +43,7 @@ function App() {
             .filter(s => s.auto_search_enabled)
             .map(s => s.query_text);
           setAutoSearches(enabled);
+          setSearchInputs(enabled.length > 0 ? enabled : [""]); // 👈 this is what was missing
         })
         .catch(err => console.error("Failed to load auto-searches:", err));
   
