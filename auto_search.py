@@ -13,6 +13,19 @@ def get_db():
     finally:
         db.close()
 
+@auto_search_bp.get("/debug_saved_searches/{username}")
+def debug_saved_searches(username: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    searches = db.query(SavedSearch).filter_by(user_id=user.id).all()
+    return [
+        {"query_text": s.query_text, "auto_search_enabled": s.auto_search_enabled}
+        for s in searches
+    ]
+
+
 @auto_search_bp.post("/enable_auto_search")
 def enable_auto_search(data: dict = Body(...), db: Session = Depends(get_db)):
     username = data.get("username")

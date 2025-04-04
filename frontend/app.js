@@ -75,10 +75,11 @@ function App() {
   
   
   async function toggleAutoSearch(queryText, enable) {
-    const endpoint = enable ? "enable_auto_search" : "delete_saved_search";
+    const endpoint = enable ? "enable_auto_search" : "disable_auto_search";
+    const url = `https://flipfinder.onrender.com/${endpoint}`;
   
     try {
-      const res = await fetch(`https://flipfinder.onrender.com/${endpoint}`, {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -87,13 +88,19 @@ function App() {
         })
       });
   
-      if (!res.ok) throw new Error(`Failed to ${enable ? "enable" : "delete"} auto-search`);
+      const data = await res.json();
   
-      console.log(`✅ Auto-search ${enable ? "enabled" : "deleted"} for "${queryText}"`);
+      if (!res.ok) {
+        console.error(`❌ ${endpoint} failed:`, data.detail || data);
+        alert(`Failed to ${enable ? "enable" : "disable"} auto-search: ${data.detail}`);
+      } else {
+        console.log(`✅ Auto-search ${enable ? "enabled" : "disabled"} for "${queryText}"`);
+      }
     } catch (err) {
-      console.error("Auto-search toggle failed:", err);
+      console.error("🔥 Network error toggling auto-search:", err);
     }
   }
+  
   
   
   
@@ -431,22 +438,16 @@ function App() {
             React.createElement("input", {
               type: "checkbox",
               checked: autoSearches.includes(input),
-              onChange: (e) => {
+              onChange: async (e) => {
                 const isChecked = e.target.checked;
-          
+              
                 if (isChecked && autoSearches.length >= 3) {
                   alert("You can only enable up to 3 auto-searches at a time.");
                   return;
                 }
-          
-                if (!isChecked && searchInputs.length >= 3 && !isSubscribed) {
-                  setAutoSearches(prev => prev.filter(q => q !== input));
-                  setSearchInputs(prev => prev.filter((val, idx) => val !== input || idx !== i));
-                  toggleAutoSearch(input, false);
-                  return;
-                }
-          
-                toggleAutoSearch(input, isChecked);
+              
+                await toggleAutoSearch(input, isChecked);
+              
                 setAutoSearches(prev => {
                   if (isChecked) {
                     return [...prev, input];
@@ -454,7 +455,7 @@ function App() {
                     return prev.filter(q => q !== input);
                   }
                 });
-              }
+              }              
             }),
             React.createElement("span", { className: "slider" })
           )          
