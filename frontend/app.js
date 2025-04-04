@@ -459,27 +459,6 @@ function App() {
             }),
             React.createElement("span", { className: "slider" })
           )
-        ),        
-        // Auto-search toggle
-        React.createElement("label", {
-          className: "switch",
-          title: "Enable Auto-search"
-        },
-          React.createElement("input", {
-            type: "checkbox",
-            checked: autoSearches.includes(input),
-            onChange: (e) => {
-              toggleAutoSearch(input, e.target.checked);
-              setAutoSearches(prev => {
-                if (e.target.checked) {
-                  return [...prev, input];
-                } else {
-                  return prev.filter(q => q !== input);
-                }
-              });
-            }            
-          }),
-          React.createElement("span", { className: "slider" })
         ),
         classicLimitReached &&
         React.createElement("p", {

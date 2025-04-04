@@ -29,7 +29,7 @@ import re
 load_dotenv()
 #print("🔑 OpenAI API Key:", os.getenv("OPENAI_API_KEY"))
 
-from models import Base, User, SavedItem, SessionLocal, engine
+from models import Base, User, SavedItem, SavedSearch, SessionLocal, engine
 from sqlalchemy.orm import Session
 
 app = FastAPI()
@@ -71,6 +71,27 @@ class SignupRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+@auto_search_bp.post("/disable_auto_search")
+def disable_auto_search(data: dict = Body(...), db: Session = Depends(get_db)):
+    username = data.get("username")
+    query_text = data.get("query_text")
+
+    if not username or not query_text:
+        raise HTTPException(status_code=400, detail="Missing username or query_text")
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    existing = db.query(SavedSearch).filter_by(user_id=user.id, query_text=query_text).first()
+    if not existing:
+        raise HTTPException(status_code=404, detail="Search not found")
+
+    existing.auto_search_enabled = False
+    db.commit()
+    return {"message": "Auto-search disabled"}
+
 
 @app.post("/signup")
 def signup(data: SignupRequest, db: Session = Depends(get_db)):
