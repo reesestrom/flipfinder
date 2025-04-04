@@ -91,7 +91,6 @@ function App() {
   
       // Optional: log or update UI
       console.log(`✅ Auto-search ${enable ? "enabled" : "disabled"} for "${queryText}"`);
-      print(`✅ Auto-search ${enable ? "enabled" : "disabled"} for "${queryText}"`);
     } catch (err) {
       console.error("Auto-search toggle failed:", err);
     }
@@ -429,10 +428,6 @@ function App() {
             className: "switch",
             title: "Enable Auto-search"
           },
-          React.createElement("label", {
-            className: "switch",
-            title: "Enable Auto-search"
-          },
             React.createElement("input", {
               type: "checkbox",
               checked: autoSearches.includes(input),
@@ -479,7 +474,6 @@ function App() {
               }              
             }),
             React.createElement("span", { className: "slider" })
-          )
         ),
         classicLimitReached &&
         React.createElement("p", {
