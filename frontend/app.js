@@ -432,7 +432,7 @@ function App() {
               color: "#555",
               marginBottom: "4px"
             }
-          }, "Email Me Deals"),
+          }, "AI Search Assistant"),
           React.createElement("label", {
             className: "switch",
             title: "Enable Auto-search"
