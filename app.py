@@ -229,19 +229,10 @@ Extract a clean, structured search intent from the user's input below.
 
 Make sure:
 - 'query' only includes the product name (no extra words or qualifiers) and should only be a few words long (2-3) (with an emphasis on brand names)
+- 'condition' reflects the user's tolerance for damage (e.g., 'used' if they accept problems)
 - 'include_terms' should highlight key features or models
 - 'exclude_terms' should reflect things the user wants to avoid
 - do not however, add included/excluded terms unledd the search input specifies qualities which the individual is looking for and thus would be relevant to filter 
-- 'condition' reflects the user's tolerance for damage (e.g., 'used' if they accept problems). Feel free to adjust this category from the previous search
-    + 'condition' should be one of:
-    +   - "new"
-    +   - "open box"
-    +   - "certified refurbished"
-    +   - "seller refurbished"
-    +   - "used"
-    +   - "for parts"
-    +   - "any"
-    + Choose the one that best reflects what the user is looking for.
 
 User input:
 \"{natural_input}\"
@@ -288,7 +279,7 @@ def refined_avg_price(query, condition=None):
         "Content-Type": "application/json",
     }
 
-    # Updated map to match eBay UI
+    # eBay condition ID mapping
     condition_map = {
         "new": "1000",
         "open box": "1500",
@@ -298,7 +289,7 @@ def refined_avg_price(query, condition=None):
         "for parts": "7000",
         "not working": "7000",
         "any": None,
-        "not specified": None  # means skip filtering
+        "not specified": None
     }
 
     filters = []
@@ -401,9 +392,10 @@ def search_ebay(parsed, original_input, postal_code=None):
                 # fallback if no loop is running — do it synchronously
                 asyncio.run(message_queue.put("increment"))
 
-        # Call this inside calculate_profit
+        # Increment the loading progress
         for _ in range(26):
             safe_enqueue_increment()
+
         price = float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
 
@@ -411,13 +403,15 @@ def search_ebay(parsed, original_input, postal_code=None):
             return None  # ✅ skip item if shipping not usable
 
         total_price = price + shipping
-        description = item.get("shortDescription", {}).get("value", "")
-        refined_query = build_refined_query_with_description(item.get("title", ""), description)
-        refined_resale = refined_avg_price(refined_query, parsed_condition)
+
+        # ✅ Use the original item's condition when refining the resale price
+        refined_resale = refined_avg_price(item.get("title", ""), parsed_condition)
+
         profit = (refined_resale * 0.85) - total_price
         roi = round(profit / total_price, 2) if total_price > 0 else 0
 
         return total_price, profit, roi, price, shipping
+
 
 
     def filter_and_score(items, include_terms, exclude_terms):
@@ -466,39 +460,6 @@ def search_ebay(parsed, original_input, postal_code=None):
     iteration = 0
     max_iterations = 10
 
-    def build_refined_query_with_description(title, description):
-        prompt = f"""
-        Given this eBay listing title and description, return a short query string that reflects the product condition and any missing or broken parts to help find accurate resale comps.
-
-        TITLE:
-        {title}
-
-        DESCRIPTION:
-        {description}
-
-        Focus on:
-        - Missing parts
-        - Broken or working status
-        - Accessories included
-        - Cosmetic condition
-
-        Return ONLY the short query string, e.g.:
-        "KitchenAid mixer missing bowl"
-        """
-        try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You write smart eBay search queries for used items."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            return response.choices[0].message.content.strip()
-        except Exception as e:
-            print("GPT error for refined query:", e)
-            return title  # fallback
-
-    
     def try_query(q, cond, includes, excludes):
         raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
         results = filter_and_score(raw_items, includes, excludes)
@@ -551,16 +512,6 @@ Please try a **new, independent** eBay-style search query:
 - Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
 - Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing "broken" to "not working")
 - Do NOT add unrelated words like "flipping", "resale", or adjectives like "mint", unless the user originally said so.
-- 'condition' reflects the user's tolerance for damage (e.g., 'used' if they accept problems). Feel free to adjust this category from the previous search
-    + 'condition' should be one of:
-    +   - "new"
-    +   - "open box"
-    +   - "certified refurbished"
-    +   - "seller refurbished"
-    +   - "used"
-    +   - "for parts"
-    +   - "any"
-    + Choose the one that best reflects what the user is looking for.
 
 Return ONLY valid JSON:
 {{
