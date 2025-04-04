@@ -14,6 +14,7 @@ import asyncio
 message_queue = asyncio.Queue()
 import datetime
 from auto_search import auto_search_bp
+from description_refiner import refine_title_and_condition
 
 
 
@@ -405,7 +406,14 @@ def search_ebay(parsed, original_input, postal_code=None):
         total_price = price + shipping
 
         # ✅ Use the original item's condition when refining the resale price
-        refined_resale = refined_avg_price(item.get("title", ""), parsed_condition)
+        description = item.get("shortDescription", {}).get("value", "")
+        title = item.get("title", "")
+        refinement = refine_title_and_condition(title, description, parsed_condition)
+
+        refined_query = refinement["refined_query"]
+        adjusted_condition = refinement["adjusted_condition"]
+
+        refined_resale = refined_avg_price(refined_query, adjusted_condition)
 
         profit = (refined_resale * 0.85) - total_price
         roi = round(profit / total_price, 2) if total_price > 0 else 0
