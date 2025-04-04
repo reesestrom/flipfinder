@@ -50,6 +50,20 @@ function App() {
   }, []);
   
   
+  async function toggleAutoSearch(queryText, enable) {
+    const endpoint = enable ? "enable_auto_search" : "disable_auto_search";
+    try {
+      const res = await fetch(`https://flipfinder.onrender.com/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, query_text: queryText })
+      });
+      if (!res.ok) throw new Error("Failed to toggle auto-search");
+    } catch (err) {
+      console.error("Auto-search toggle failed:", err);
+    }
+  }
+  
 
   async function handleSignupSubmit(e) {
     e.preventDefault();
@@ -337,18 +351,58 @@ function App() {
       )
     ),
     searchInputs.map((input, i) =>
-      React.createElement("div", { key: i, style: { marginBottom: "10px" } },
+      React.createElement("div", {
+        key: i,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          marginBottom: "14px"
+        }
+      },
+        // Search input box
         React.createElement("input", {
           type: "text",
           placeholder: "Enter search like: 'Macbook Pro used'",
           value: input,
           onChange: e => handleInputChange(i, e.target.value),
-          style: { width: "100%", padding: "10px", fontSize: "16px" }
+          style: {
+            flex: 1,
+            padding: "10px",
+            fontSize: "16px"
+          }
         }),
+    
+        // Auto-search toggle
+        React.createElement("label", {
+          className: "switch",
+          title: "Enable Auto-search"
+        },
+          React.createElement("input", {
+            type: "checkbox",
+            checked: autoSearches.includes(input),
+            onChange: (e) => {
+              toggleAutoSearch(input, e.target.checked);
+              setAutoSearches(prev => {
+                if (e.target.checked) {
+                  return [...prev, input];
+                } else {
+                  return prev.filter(q => q !== input);
+                }
+              });
+            }
+          }),
+          React.createElement("span", { className: "slider" })
+        ),
+    
+        // Optional "Remove" button if there's more than 1 field
         searchInputs.length > 1 &&
-        React.createElement("button", { onClick: () => removeSearchField(i) }, "Remove")
+        React.createElement("button", {
+          onClick: () => removeSearchField(i)
+        }, "Remove")
       )
     ),
+    
     React.createElement("div", null,
       React.createElement("button", { className: "buttonSecondary", onClick: addSearchField }, "Add Another"),
       React.createElement("button", { className: "buttonPrimary", onClick: handleSearch, disabled: isLoading }, "Search")
@@ -506,32 +560,7 @@ function App() {
                     color: "gold",
                     marginLeft: "10px"
                   }
-                }, "★"),
-                React.createElement("label", {
-                  style: {
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    fontSize: "14px",
-                    marginLeft: "10px"
-                  }
-                },
-                  "Auto-search",
-                  React.createElement("input", {
-                    type: "checkbox",
-                    checked: autoSearches.includes(item.title),
-                    onChange: (e) => {
-                      toggleAutoSearch(item.title, e.target.checked);
-                      setAutoSearches(prev => {
-                        if (e.target.checked) {
-                          return [...prev, item.title];
-                        } else {
-                          return prev.filter(q => q !== item.title);
-                        }
-                      });
-                    }
-                  })
-                )                
+                }, "★"),                
               )
             )
           : React.createElement("p", null, "You haven't saved any listings yet.")
