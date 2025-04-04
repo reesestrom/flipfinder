@@ -19,7 +19,7 @@ if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
 
 db = SessionLocal()
 now = datetime.datetime.utcnow()
-print("\ud83d\udcec Sending daily Flip Finder summary emails...")
+print("📬 Sending daily Flip Finder summary emails...")
 
 # Get all snapshots from today
 start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
