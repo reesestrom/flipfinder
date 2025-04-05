@@ -17,7 +17,7 @@ from auto_search import auto_search_bp
 from description_refiner import refine_title_and_condition
 from password_reset import router as reset_router
 from pydantic import BaseModel
-from models import get_db
+from db import get_db
 
 
 
@@ -87,13 +87,6 @@ def change_email(data: ChangeEmailRequest, db: Session = Depends(get_db)):
     return {"message": "Email updated successfully"}
 
 
-# Dependency for DB session
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # Signup model
 class SignupRequest(BaseModel):
