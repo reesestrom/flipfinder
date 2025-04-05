@@ -109,10 +109,14 @@ def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
 
 @app.get("/get_email/{username}")
 def get_email(username: str, db: Session = Depends(get_db)):
+    print(f"Getting email for username: {username}")
     user = db.query(User).filter(User.username == username).first()
     if not user:
+        print("❌ User not found!")
         raise HTTPException(status_code=404, detail="User not found")
+    print(f"✅ Found user: {user.email}")
     return {"email": user.email}
+
 
 
 @app.get("/get_email_days/{username}")
