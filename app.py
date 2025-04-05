@@ -70,6 +70,13 @@ class ChangeEmailRequest(BaseModel):
     old_email: str
     new_email: str
 
+@app.post("/set_email_days")
+def set_email_days(data: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    current_user.email_days = ",".join(str(day) for day in data["days"])
+    db.commit()
+    return {"message": "Email days updated successfully"}
+
+
 @app.post("/change_email")
 def change_email(data: ChangeEmailRequest, db: Session = Depends(get_db)):
     # Check if new email is already in use
