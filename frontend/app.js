@@ -22,9 +22,17 @@ function App() {
   const [classicLimitReached, setClassicLimitReached] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const ZIP_API_KEY = "9d2e0c1df7754fac9df73a6a7addd9ec";
+  const [showAccountPopup, setShowAccountPopup] = useState(false);
+  const [showEmailSchedule, setShowEmailSchedule] = useState(false);
+  const [emailDays, setEmailDays] = useState([]);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [email, setEmail] = useState(localStorage.getItem("email") || "");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+
+
   
-
-
   
 
 
@@ -77,6 +85,81 @@ function App() {
       .catch(err => console.error("Failed to load saved items:", err));
   }, [username]);
   
+  // ✅ Handle opening the email schedule modal
+  async function handleOpenEmailSchedule() {
+    console.log("🟢 Email schedule button clicked!");
+  
+    try {
+      const res = await fetch(`https://flipfinder.onrender.com/get_email_days/${username}`);
+      const data = await res.json();
+      if (res.ok) {
+        setEmailDays(data.days || []);
+        setShowEmailSchedule(true);
+      } else {
+        setEmailDays([]);
+        setShowEmailSchedule(true);
+      }
+    } catch (err) {
+      console.error("Failed to load email days:", err);
+      setEmailDays([]);
+      setShowEmailSchedule(true);
+    }
+  
+    setShowAccountPopup(false);
+  }
+  
+  // ✅ Handle opening the username modal
+  async function handleOpenUsernameModal() {
+    console.log("🟢 Change Username button clicked!");
+    setShowAccountPopup(false);
+    setShowUsernameModal(true);
+    
+  }
+    
+  function handleOpenPasswordModal() {
+    console.log("🔐 Opening password reset modal...");
+    setShowAccountPopup(false);
+    setShowPasswordModal(true);
+  }
+  
+
+  async function handleOpenEmailModal() {
+    console.log("📧 handleOpenEmailModal triggered!");
+  
+    try {
+      const res = await fetch(`https://flipfinder.onrender.com/get_email/${username}`);
+      const data = await res.json();
+      if (res.ok) {
+        setEmail(data.email || "");
+        setShowEmailModal(true);
+      } else {
+        console.error("Failed to fetch email:", data.detail);
+        setEmail("");
+        setShowEmailModal(true);
+      }
+    } catch (err) {
+      console.error("Error fetching email:", err);
+      setEmail("");
+      setShowEmailModal(true);
+    }
+  
+    setShowAccountPopup(false);
+  }
+  
+  window.handleOpenEmailModal = handleOpenEmailModal;  
+  window.handleOpenEmailSchedule = handleOpenEmailSchedule;
+  window.handleOpenUsernameModal = handleOpenUsernameModal; // ✅ THIS is what’s missing
+  window.setShowUsernameModal = setShowUsernameModal;
+  window.ChangeUsernameModal = ChangeUsernameModal;
+  window.handleOpenPasswordModal = handleOpenPasswordModal;
+  window.handleOpenDeleteModal = () => {
+    console.log("🗑️ Delete Account button clicked");
+    setShowAccountPopup(false);
+    setShowDeleteModal(true);
+  };
+  
+
+
   
   
   
@@ -468,8 +551,99 @@ function App() {
         height: "120"
       })
     ),
-    React.createElement("div", { id: "auth-buttons" },
-      React.createElement("button", { className: "buttonSecondary", onClick: handleLogOut }, "Log Out")
+    React.createElement("div", {
+      id: "auth-buttons",
+      style: {
+        position: "absolute",
+        top: "20px",
+        right: "20px",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        zIndex: 100
+      }
+    },    
+    React.createElement("img", {
+      src: "assets/logoicon.png",
+      alt: "Account",
+      style: {
+        width: "34px",
+        height: "34px",
+        cursor: "pointer",
+        borderRadius: "50%",
+        boxShadow: "0 0 6px rgba(0,0,0,0.1)"
+      },
+      onClick: () => setShowAccountPopup(prev => !prev)
+    }),
+    React.createElement("button", { className: "buttonSecondary", onClick: handleLogOut }, "Log Out"),
+
+showAccountPopup && React.createElement(window.AccountPopup, { onClose: () => setShowAccountPopup(false) }),
+showPasswordModal && React.createElement(window.ChangePasswordModal, {
+  userEmail: email,
+  onClose: () => setShowPasswordModal(false)
+}),
+
+showEmailSchedule && React.createElement(window.EmailScheduleModal, {
+  username,
+  selectedDays: emailDays,
+  onClose: () => setShowEmailSchedule(false),
+  onSave: (days) => {
+    setEmailDays(days);
+    setShowEmailSchedule(false);
+
+    if (days.length === 0) {
+      autoSearches.forEach(q => toggleAutoSearch(q, false));
+      setAutoSearches([]);
+    }
+  }
+}),
+showDeleteModal && React.createElement(window.DeleteAccountModal, {
+  email,
+  onClose: () => setShowDeleteModal(false),
+  onDelete: async () => {
+    try {
+      const res = await fetch("https://flipfinder.onrender.com/delete_account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+
+      if (res.ok) {
+        localStorage.removeItem("user");
+        alert("✅ Account deleted.");
+        window.location.reload();
+      } else {
+        alert("❌ Failed to delete account.");
+      }
+    } catch (err) {
+      console.error("Error deleting account:", err);
+      alert("❌ Error deleting account.");
+    }
+  }
+}),
+showEmailModal && React.createElement(window.ChangeEmailModal, {
+  currentEmail: email,
+  onClose: () => setShowEmailModal(false),
+  onSave: (newEmail) => {
+    setEmail(newEmail);
+    localStorage.setItem("email", newEmail);
+    setShowEmailModal(false);
+  }
+}),
+
+
+showUsernameModal && React.createElement(window.ChangeUsernameModal, {
+
+  currentUsername: username,
+  onClose: () => setShowUsernameModal(false),
+  onSave: (newName) => {
+    setUsername(newName);
+    localStorage.setItem("user", newName);
+    setShowUsernameModal(false);
+  }
+})
+
+   
     ),
     React.createElement("h3", null, "What are you looking to flip today?"),
     React.createElement("div", { className: "stock-buttons" },
@@ -481,6 +655,7 @@ function App() {
         }, label)
       )
     ),
+  
     searchInputs.map((input, i) =>
       React.createElement("div", {
         key: i,

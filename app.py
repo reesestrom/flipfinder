@@ -16,6 +16,9 @@ import datetime
 from auto_search import auto_search_bp
 from description_refiner import refine_title_and_condition
 from password_reset import router as reset_router
+from pydantic import BaseModel
+
+
 
 
 
@@ -62,6 +65,27 @@ EBAY_TOKEN_EXPIRY = 0
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-api-key")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+class ChangeEmailRequest(BaseModel):
+    old_email: str
+    new_email: str
+
+@app.post("/change_email")
+def change_email(data: ChangeEmailRequest, db: Session = Depends(get_db)):
+    # Check if new email is already in use
+    if db.query(User).filter(User.email == data.new_email).first():
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    # Find current user by old email
+    user = db.query(User).filter(User.email == data.old_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update the email
+    user.email = data.new_email
+    db.commit()
+    return {"message": "Email updated successfully"}
+
+
 # Dependency for DB session
 def get_db():
     db = SessionLocal()
@@ -75,6 +99,44 @@ class SignupRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+@app.post("/delete_account")
+def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
+    email = data.get("email")
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # delete related data
+    db.query(AutoSearch).filter(AutoSearch.user_id == user.id).delete()
+    db.query(SavedSearch).filter(SavedSearch.user_id == user.id).delete()
+    db.query(Snapshot).filter(Snapshot.user_id == user.id).delete()
+    db.query(EmailedSnapshot).filter(EmailedSnapshot.user_id == user.id).delete()
+    db.delete(user)
+    db.commit()
+
+    return {"message": "Account deleted"}
+
+@app.get("/get_email/{username}")
+def get_email(username: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"email": user.email}
+
+
+@app.get("/get_email_days/{username}")
+def get_email_days(username: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not user.email_days:
+        return {"days": [0,1,2,3,4,5,6]}  # default to all days selected
+
+    return {"days": [int(d) for d in user.email_days.split(",") if d.isdigit()]}
+
 
 @auto_search_bp.post("/disable_auto_search")
 def disable_auto_search(data: dict = Body(...), db: Session = Depends(get_db)):
@@ -96,14 +158,38 @@ def disable_auto_search(data: dict = Body(...), db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Auto-search disabled"}
 
+@app.post("/change_username")
+def change_username(data: dict = Body(...), db: Session = Depends(get_db)):
+    old = data.get("old_username")
+    new = data.get("new_username")
+
+    if not old or not new:
+        raise HTTPException(status_code=400, detail="Missing usernames")
+
+    if db.query(User).filter(User.username == new).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    user = db.query(User).filter(User.username == old).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.username = new
+    db.commit()
+
+    return {"message": "Username updated"}
 
 @app.post("/signup")
 def signup(data: SignupRequest, db: Session = Depends(get_db)):
     if db.query(User).filter((User.username == data.username) | (User.email == data.email)).first():
         raise HTTPException(status_code=400, detail="Username or email already exists")
 
-    new_user = User(username=data.username, email=data.email)
+    new_user = User(
+        username=data.username,
+        email=data.email,
+        email_days="0,1,2,3,4,5,6"  # ✅ default to all days selected
+    )
     new_user.set_password(data.password)
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

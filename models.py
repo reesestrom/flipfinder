@@ -29,6 +29,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    email_days = Column(String, default="0123456")  # stored as comma-separated numbers (0=Sun, ..., 6=Sat)
+
 
     def verify_password(self, password: str) -> bool:
         return pwd_context.verify(password, self.hashed_password)

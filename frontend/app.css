@@ -211,3 +211,180 @@ input:checked + .slider {
 input:checked + .slider:before {
   transform: translateX(24px);
 }
+.account-popup {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  padding: 20px;
+  z-index: 1000;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.account-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-align: center;
+  color: #333;
+}
+
+.account-option {
+  background: none;
+  border: none;
+  padding: 10px 0;
+  text-align: left;
+  font-size: 15px;
+  color: #333;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s;
+}
+
+.account-option:hover {
+  background: #f9f9f9;
+}
+
+.delete-account {
+  color: #e53935;
+  font-weight: 600;
+  border-bottom: none;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 20px;
+  padding: 30px;
+  width: 400px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  width: 340px;
+  text-align: center;
+  position: relative;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.day-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #4CAF50;
+  background: white;
+  color: #4CAF50;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+
+.days-grid {
+  display: flex;
+  flex-direction: row;       /* ✅ force horizontal layout */
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: nowrap;         /* prevent wrapping */
+  margin: 20px 0;
+}
+
+.day-button:hover {
+  transform: scale(1.1);
+}
+
+.day-button.selected {
+  background: #4CAF50;
+  color: white;
+}
+
+.save-schedule-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.input-box {
+  width: 90%;
+  padding: 12px;
+  margin: 20px 0;
+  border-radius: 10px;
+  border: 2px solid #4CAF50;
+  font-size: 16px;
+  text-align: center;
+}
+
+/* Error text */
+.error-text {
+  color: red;
+  margin-bottom: 10px;
+}
+
+.save-schedule-btn {
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 30px;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.close-schedule-btn {
+  background-color: #f1f1f1;
+  color: black;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
