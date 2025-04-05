@@ -1,23 +1,14 @@
-window.DeleteAccountModal = function DeleteAccountModal({ email, onClose, onDelete }) {
+window.DeleteAccountModal = function DeleteAccountModal({ onClose, onConfirm }) {
     return React.createElement("div", { className: "modal-overlay" },
-      React.createElement("div", { className: "modal-window" },
-        React.createElement("h3", {
-          style: {
-            textAlign: "center",
-            fontWeight: "600",
-            marginBottom: "24px"
-          }
-        }, "Your Account and Information Will Be Permanently Deleted"),
+      React.createElement("div", { className: "modal-content" },
+        React.createElement("h3", null, "Delete Account"),
+        React.createElement("p", {
+          style: { marginBottom: "20px", textAlign: "center" }
+        }, "Your account and all associated information will be permanently deleted."),
   
-        React.createElement("div", {
-          style: {
-            display: "flex",
-            justifyContent: "center",
-            gap: "12px"
-          }
-        },
+        React.createElement("div", { style: { marginTop: "20px" } },
           React.createElement("button", {
-            onClick: onDelete,
+            onClick: onConfirm,
             style: {
               backgroundColor: "#d32f2f",
               color: "#fff",
@@ -26,14 +17,14 @@ window.DeleteAccountModal = function DeleteAccountModal({ email, onClose, onDele
               borderRadius: "12px",
               fontWeight: "bold",
               cursor: "pointer",
-              fontSize: "16px"
+              fontSize: "16px",
+              marginRight: "10px"
             }
           }, "Delete"),
-  
           React.createElement("button", {
-            onClick: onClose,
-            className: "modal-close-button"
-          }, "X")
+            className: "close-schedule-btn",
+            onClick: onClose
+          }, "✕")
         )
       )
     );
