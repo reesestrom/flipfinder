@@ -98,7 +98,7 @@ function App() {
   
       if (!res.ok) {
         console.error(`❌ ${endpoint} failed:`, data.detail || data);
-        alert(`Failed to ${enable ? "enable" : "disable"} auto-search: ${data.detail}`);
+        //alert(`Failed to ${enable ? "enable" : "disable"} auto-search: ${data.detail}`);
       } else {
         console.log(`✅ Auto-search ${enable ? "enabled" : "disabled"} for "${queryText}"`);
       }
