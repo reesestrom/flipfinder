@@ -141,11 +141,12 @@ def get_email_days(username: str, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if not user.email_days:
-        return {"days": [0,1,2,3,4,5,6]}  # default to all days selected
-
-    return {"days": [int(d) for d in user.email_days.split(",") if d.isdigit()]}
-
+    if user.email_days:
+        try:
+            return {"days": [int(d) for d in user.email_days.split(",") if d != ""]}
+        except Exception:
+            return {"days": []}
+    return {"days": []}
 
 @auto_search_bp.post("/disable_auto_search")
 def disable_auto_search(data: dict = Body(...), db: Session = Depends(get_db)):
