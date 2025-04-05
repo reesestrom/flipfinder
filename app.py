@@ -17,6 +17,7 @@ from auto_search import auto_search_bp
 from description_refiner import refine_title_and_condition
 from password_reset import router as reset_router
 from pydantic import BaseModel
+from models import get_db
 
 
 
