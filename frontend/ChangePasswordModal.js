@@ -42,7 +42,7 @@ window.ChangePasswordModal = function ChangePasswordModal({ userEmail, onClose }
                     body: JSON.stringify({ email: userEmail })
                   });
                   const data = await res.json();
-                  res.ok ? "✅ Reset email sent!" : data.message || "Something went wrong.";
+                  alert(res.ok ? "✅ Reset email sent!" : data.message || "Something went wrong.");
                   onClose();
                 } catch (err) {
                   alert("Something went wrong. Please try again later.");
