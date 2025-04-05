@@ -72,6 +72,10 @@ class ChangeEmailRequest(BaseModel):
     old_email: str
     new_email: str
 
+@app.post("/request_password_reset")
+def request_password_reset(data: dict = Body(...), db: Session = Depends(get_db)):
+    email = data.get("email")
+
 @app.post("/set_email_days")
 def set_email_days(data: dict = Body(...), db: Session = Depends(get_db)):
     username = data.get("username")

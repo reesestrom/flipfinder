@@ -35,6 +35,7 @@ window.ChangePasswordModal = function ChangePasswordModal({ userEmail, onClose }
             React.createElement("button", {
               className: "save-schedule-btn",
               onClick: async () => {
+                console.log("📨 Sending reset email to:", userEmail, typeof userEmail);
                 try {
                   const res = await fetch("https://flipfinder.onrender.com/request_password_reset", {
                     method: "POST",
