@@ -46,7 +46,12 @@ app.include_router(auto_search_bp)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or be more strict with your domain
+    allow_origins=[
+        "https://flipfinderwebsite.onrender.com",  # production frontend
+        "http://localhost:3000",                   # local React dev
+        "http://127.0.0.1:3000",                   # fallback local
+        "null"                                     # file:// access during local dev
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -109,14 +114,10 @@ def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
 
 @app.get("/get_email/{username}")
 def get_email(username: str, db: Session = Depends(get_db)):
-    print(f"Getting email for username: {username}")
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        print("❌ User not found!")
         raise HTTPException(status_code=404, detail="User not found")
-    print(f"✅ Found user: {user.email}")
     return {"email": user.email}
-
 
 
 @app.get("/get_email_days/{username}")
