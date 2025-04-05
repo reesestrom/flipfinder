@@ -21,6 +21,7 @@ function App() {
   const [listingsSearched, setListingsSearched] = useState(0);
   const [classicLimitReached, setClassicLimitReached] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const ZIP_API_KEY = "9d2e0c1df7754fac9df73a6a7addd9ec";
   
 
 
@@ -133,7 +134,7 @@ function App() {
     }
   }
 
-  const ZIP_API_KEY = process.env.REACT_APP_OPENCAGE_KEY;
+
 
   async function fetchZipFromLocation() {
     return new Promise((resolve, reject) => {
@@ -144,19 +145,23 @@ function App() {
   
       navigator.geolocation.getCurrentPosition(async (position) => {
         const { latitude, longitude } = position.coords;
+  
         try {
           const response = await fetch(
             `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${ZIP_API_KEY}`
           );
+  
           const data = await response.json();
           const zip = data?.results?.[0]?.components?.postcode;
           resolve(zip || null);
         } catch (err) {
+          console.error("Failed to fetch ZIP code from OpenCage:", err);
           reject(err);
         }
       }, reject);
     });
   }
+  
   
   
 
