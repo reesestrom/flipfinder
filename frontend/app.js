@@ -30,6 +30,8 @@ function App() {
   const [email, setEmail] = useState(localStorage.getItem("email") || "");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
 
 
   
@@ -41,6 +43,7 @@ function App() {
     const storedUser = localStorage.getItem("user");
     const storedPrefs = localStorage.getItem("userPreferences");
     const storedZip = localStorage.getItem("zip");
+    
   
     if (storedUser) {
       setUsername(storedUser);
@@ -85,6 +88,26 @@ function App() {
       .catch(err => console.error("Failed to load saved items:", err));
   }, [username]);
   
+  async function fetchUserInfo() {
+    if (!username) return;
+  
+    try {
+      const res = await fetch(`https://flipfinder.onrender.com/get_email/${username}`);
+      if (!res.ok) {
+        console.error("❌ Failed to fetch user email:", res.statusText);
+        return;
+      }
+      const data = await res.json();
+      console.log("📬 Pulled email from server:", data.email);
+      setUserEmail(data.email);
+    } catch (err) {
+      console.error("❌ Error fetching user email:", err);
+    }
+  }
+  
+  fetchUserInfo();
+  
+
   // ✅ Handle opening the email schedule modal
   async function handleOpenEmailSchedule() {
     console.log("🟢 Email schedule button clicked!");
@@ -119,8 +142,13 @@ function App() {
   function handleOpenPasswordModal() {
     console.log("🔐 Opening password reset modal...");
     setShowAccountPopup(false);
-    setShowPasswordModal(true);
-  }
+    if (userEmail) {
+      console.log("🔐 Opening password reset modal...");
+      setShowPasswordModal(true);
+    } else {
+      console.warn("⚠️ Tried to open password modal before userEmail was ready.");
+    }
+      }
   
 
   async function handleOpenEmailModal() {

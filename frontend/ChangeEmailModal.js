@@ -1,6 +1,7 @@
 window.ChangeEmailModal = function ChangeEmailModal({ currentEmail, onClose, onSave }) {
     const [newEmail, setNewEmail] = React.useState(currentEmail);
     const [error, setError] = React.useState("");
+    
   
     async function handleSave() {
       if (!newEmail || newEmail === currentEmail) {

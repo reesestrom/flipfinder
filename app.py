@@ -72,9 +72,18 @@ class ChangeEmailRequest(BaseModel):
     old_email: str
     new_email: str
 
+from fastapi import Body
+
 @app.post("/request_password_reset")
-def request_password_reset(data: dict = Body(...), db: Session = Depends(get_db)):
-    email = data.get("email")
+def request_password_reset(email: str = Body(...), db: Session = Depends(get_db)):
+    print("📨 Reset requested for:", email)
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Continue with reset logic...
+    return {"message": "Reset email sent"}
+
 
 @app.post("/set_email_days")
 def set_email_days(data: dict = Body(...), db: Session = Depends(get_db)):
