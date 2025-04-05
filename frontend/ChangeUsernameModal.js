@@ -1,35 +1,31 @@
-window.ChangeUsernameModal = function ChangeUsernameModal({ currentUsername, onClose, onSave }) {
-  const [username, setUsername] = React.useState(currentUsername);
-  const [error, setError] = React.useState("");
+window.AccountPopup = function AccountPopup({ onClose }) {
+  const popupRef = React.useRef(null);
 
-  async function handleSave() {
-    setError("");
-    const res = await fetch("https://flipfinder.onrender.com/change_username", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ old_username: currentUsername, new_username: username })
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.detail || "Unknown error");
-    } else {
-      onSave(username);
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        onClose();
+      }
     }
-  }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
 
-  return React.createElement("div", { className: "modal-overlay" },
-    React.createElement("div", { className: "modal-content" },
-      React.createElement("h3", null, "Change Your Username"),
-      React.createElement("input", {
-        type: "text",
-        value: username,
-        onChange: (e) => setUsername(e.target.value),
-        className: "input-box"
-      }),
-      error && React.createElement("div", { className: "error-text" }, error),
-      React.createElement("button", { className: "save-schedule-btn", onClick: handleSave }, "Save"),
-      React.createElement("button", { className: "close-schedule-btn", onClick: onClose }, "✕")
-    )
+  return React.createElement("div", { className: "account-popup", ref: popupRef },
+    React.createElement("h4", { className: "account-title" }, "Account Settings"),
+
+    React.createElement("button", {
+      className: "account-option",
+      onClick: () => window.handleOpenEmailSchedule && window.handleOpenEmailSchedule()
+    }, "Change Email Schedule"),
+
+    React.createElement("button", {
+      className: "account-option",
+      onClick: () => window.handleOpenUsernameModal && window.handleOpenUsernameModal()
+    }, "Change Username"),
+
+    React.createElement("button", { className: "account-option" }, "Change Email"),
+    React.createElement("button", { className: "account-option" }, "Change Password"),
+    React.createElement("button", { className: "account-option delete-account" }, "Delete Account")
   );
 };
