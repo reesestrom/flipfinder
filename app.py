@@ -71,7 +71,7 @@ class ChangeEmailRequest(BaseModel):
     new_email: str
 
 @app.post("/set_email_days")
-def set_email_days(data: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def set_email_days(data: dict, db: Session = Depends(get_db), current_user: User = Depends(get_db)):
     current_user.email_days = ",".join(str(day) for day in data["days"])
     db.commit()
     return {"message": "Email days updated successfully"}
