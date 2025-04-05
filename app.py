@@ -37,6 +37,8 @@ load_dotenv()
 #print("🔑 OpenAI API Key:", os.getenv("OPENAI_API_KEY"))
 
 from models import Base, User, SavedItem, SavedSearch, SessionLocal, engine
+from models import User, SavedSearch, SavedItem, SearchResultSnapshot, EmailedListing
+
 from sqlalchemy.orm import Session
 
 app = FastAPI()
@@ -117,13 +119,17 @@ def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # delete related data
-    db.query(AutoSearch).filter(AutoSearch.user_id == user.id).delete()
+    # delete related data using the correct model names
     db.query(SavedSearch).filter(SavedSearch.user_id == user.id).delete()
-    db.query(Snapshot).filter(Snapshot.user_id == user.id).delete()
-    db.query(EmailedSnapshot).filter(EmailedSnapshot.user_id == user.id).delete()
+    db.query(SavedItem).filter(SavedItem.user_id == user.id).delete()
+    db.query(SearchResultSnapshot).filter(SearchResultSnapshot.user_id == user.id).delete()
+    db.query(EmailedListing).filter(EmailedListing.user_id == user.id).delete()
+
     db.delete(user)
     db.commit()
+
+    return {"message": "Account deleted"}
+
 
     return {"message": "Account deleted"}
 
