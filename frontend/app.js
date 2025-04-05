@@ -389,6 +389,24 @@ function App() {
         React.createElement("button", { type: "submit", className: "buttonPrimary", style: { width: "100%", padding: "10px" } }, "Log In"),
         loginMessage && React.createElement("p", null, loginMessage)
       ),
+      React.createElement("button", {
+        type: "button",
+        className: "signup-toggle",
+        onClick: () => {
+          const email = prompt("Enter your email to reset password:");
+          if (!email) return;
+      
+          fetch("https://flipfinder.onrender.com/request_password_reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+          })
+            .then(res => res.json())
+            .then(data => alert(data.message || "If your email exists, you will receive a reset link."))
+            .catch(err => alert("Something went wrong. Please try again."));
+        }
+      }, "Forgot your password?"),
+      
       React.createElement("div", { style: { marginTop: "20px" } },
         React.createElement("h4", null, "Don't have an account?"),
         !showSignup && React.createElement("button", {

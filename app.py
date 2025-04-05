@@ -15,6 +15,8 @@ message_queue = asyncio.Queue()
 import datetime
 from auto_search import auto_search_bp
 from description_refiner import refine_title_and_condition
+from password_reset import router as reset_router
+
 
 
 
@@ -35,6 +37,7 @@ from sqlalchemy.orm import Session
 
 app = FastAPI()
 
+app.include_router(reset_router)
 app.include_router(auto_search_bp)
 
 app.add_middleware(
