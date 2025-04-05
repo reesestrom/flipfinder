@@ -21,6 +21,7 @@ function App() {
   const [listingsSearched, setListingsSearched] = useState(0);
   const [classicLimitReached, setClassicLimitReached] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  
 
 
   
@@ -132,6 +133,8 @@ function App() {
     }
   }
 
+  const ZIP_API_KEY = process.env.REACT_APP_OPENCAGE_KEY;
+
   async function fetchZipFromLocation() {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -143,7 +146,7 @@ function App() {
         const { latitude, longitude } = position.coords;
         try {
           const response = await fetch(
-            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${process.env.REACT_APP_OPENCAGE_KEY}`
+            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${ZIP_API_KEY}`
           );
           const data = await response.json();
           const zip = data?.results?.[0]?.components?.postcode;
@@ -154,6 +157,7 @@ function App() {
       }, reject);
     });
   }
+  
   
 
   async function handleLoginSubmit(e) {
@@ -554,7 +558,7 @@ function App() {
     isLoading && React.createElement("div", {
       style: { marginTop: "10px", fontSize: "16px", color: "#555" }
     }, 
-      "Listings searched: ",
+      "Listings Searched: ",
       React.createElement("span", { style: { color: "#4CAF50", fontWeight: "bold" } }, listingsSearched)
     ),    
     React.createElement("div", { className: "result-box", style: { marginTop: "20px" } },
