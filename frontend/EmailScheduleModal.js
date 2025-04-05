@@ -1,6 +1,6 @@
 window.EmailScheduleModal = function EmailScheduleModal({ username, selectedDays = [], onClose, onSave }) {
-    const [days, setDays] = React.useState(new Set());
-    const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
+  const [days, setDays] = React.useState(() => new Set(selectedDays));
+  const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
 
     
   

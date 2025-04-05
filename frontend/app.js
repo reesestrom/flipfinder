@@ -124,27 +124,23 @@ function App() {
   
 
   async function handleOpenEmailModal() {
-    console.log("📧 handleOpenEmailModal triggered!");
+    console.log("📧 Opening change email modal...");
+    setShowAccountPopup(false);
   
     try {
       const res = await fetch(`https://flipfinder.onrender.com/get_email/${username}`);
       const data = await res.json();
       if (res.ok) {
-        setEmail(data.email || "");
+        setEmail(data.email);
         setShowEmailModal(true);
       } else {
-        console.error("Failed to fetch email:", data.detail);
-        setEmail("");
-        setShowEmailModal(true);
+        console.error("Failed to load email:", data.detail);
       }
     } catch (err) {
       console.error("Error fetching email:", err);
-      setEmail("");
-      setShowEmailModal(true);
     }
-  
-    setShowAccountPopup(false);
   }
+  
   
   window.handleOpenEmailModal = handleOpenEmailModal;  
   window.handleOpenEmailSchedule = handleOpenEmailSchedule;
@@ -489,8 +485,8 @@ function App() {
           fetch("https://flipfinder.onrender.com/request_password_reset", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email })
-          })
+            body: JSON.stringify({ email: userEmail })  // ✅ Must match pydantic model in backend
+          })          
             .then(res => res.json())
             .then(data => alert(data.message || "If your email exists, you will receive a reset link."))
             .catch(err => alert("Something went wrong. Please try again."));

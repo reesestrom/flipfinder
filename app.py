@@ -50,7 +50,6 @@ app.add_middleware(
         "https://flipfinderwebsite.onrender.com",  # production frontend
         "http://localhost:3000",                   # local React dev
         "http://127.0.0.1:3000",                   # fallback local
-        "null"                                     # file:// access during local dev
     ],
     allow_credentials=True,
     allow_methods=["*"],
