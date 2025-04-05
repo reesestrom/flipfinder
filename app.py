@@ -46,11 +46,7 @@ app.include_router(auto_search_bp)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://flipfinderwebsite.onrender.com",  # production frontend
-        "http://localhost:3000",                   # local React dev
-        "http://127.0.0.1:3000",                   # fallback local
-    ],
+    allow_origins=["*"],  # or be more strict with your domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

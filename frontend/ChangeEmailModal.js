@@ -1,13 +1,16 @@
 window.ChangeEmailModal = function ChangeEmailModal({ currentEmail, onClose, onSave }) {
-    const [newEmail, setNewEmail] = React.useState(currentEmail);
-    const [error, setError] = React.useState("");
+    const [newEmail, setNewEmail] = React.useState(currentEmail || "");
+  
+    React.useEffect(() => {
+      setNewEmail(currentEmail || "");
+    }, [currentEmail]);
+  
   
     async function handleSave() {
       if (!newEmail || newEmail === currentEmail) {
         onClose();
         return;
       }
-  
       try {
         const res = await fetch("https://flipfinder.onrender.com/change_email", {
           method: "POST",
