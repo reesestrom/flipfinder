@@ -2,9 +2,10 @@ window.EmailScheduleModal = function EmailScheduleModal({ username, selectedDays
   const [days, setDays] = React.useState(() => new Set(selectedDays));
   const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
 
-  // 🟢 Ensure days are hydrated from backend
+  // 🟢 Load days from backend
   React.useEffect(() => {
     async function fetchDays() {
+      if (!username) return;
       try {
         const res = await fetch(`https://flipfinder.onrender.com/get_email_days/${username}`);
         const data = await res.json();
@@ -28,15 +29,27 @@ window.EmailScheduleModal = function EmailScheduleModal({ username, selectedDays
 
   async function handleSave() {
     const toSave = Array.from(days);
+    if (!username) {
+      alert("No username provided.");
+      return;
+    }
+
     try {
-      await fetch("https://flipfinder.onrender.com/set_email_days", {
+      const res = await fetch("https://flipfinder.onrender.com/set_email_days", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, days: toSave })
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server responded with ${res.status}: ${errorText}`);
+      }
+
+      console.log("✅ Email days successfully saved:", toSave);
       onSave(toSave);
     } catch (err) {
-      alert("Failed to save email days.");
+      alert("❌ Failed to save email schedule. Check console for details.");
       console.error(err);
     }
   }

@@ -71,10 +71,18 @@ class ChangeEmailRequest(BaseModel):
     new_email: str
 
 @app.post("/set_email_days")
-def set_email_days(data: dict, db: Session = Depends(get_db), current_user: User = Depends(get_db)):
-    current_user.email_days = ",".join(str(day) for day in data["days"])
+def set_email_days(data: dict = Body(...), db: Session = Depends(get_db)):
+    username = data.get("username")
+    days = data.get("days", [])
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.email_days = ",".join(str(day) for day in days)
     db.commit()
     return {"message": "Email days updated successfully"}
+
 
 
 @app.post("/change_email")
