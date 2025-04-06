@@ -660,7 +660,7 @@ showDeleteModal && React.createElement(window.DeleteAccountModal, {
 
       if (res.ok) {
         localStorage.removeItem("user");
-        alert("✅ Account deleted.");
+        //alert("✅ Account deleted.");
         window.location.reload();  // Reload the page after successful deletion
       } else {
         alert("❌ Failed to delete account.");
