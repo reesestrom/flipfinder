@@ -127,12 +127,15 @@ class SignupRequest(BaseModel):
 @app.post("/delete_account")
 def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
     print(user_email, "here is the email")
+    print(data.userEmail)
     user_email = data.get("userEmail").strip().lower()  # Normalize the email (trim and lowercase)
+    print(user_email, "here is the email after")
     
     
     # Use a case-insensitive query and make sure to remove any extra whitespace
     user = db.query(User).filter(User.email == user_email).first()
-    
+    print(user.email, "user.email")
+
     if not user:
         raise HTTPException(status_code=404, detail=user_email)
     
