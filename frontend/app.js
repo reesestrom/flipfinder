@@ -655,7 +655,7 @@ showDeleteModal && React.createElement(window.DeleteAccountModal, {
       const res = await fetch("https://flipfinder.onrender.com/delete_account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userEmail })  // Pass the email for account deletion
+        body: JSON.stringify({userEmail})  // Pass the email for account deletion
       });
 
       if (res.ok) {

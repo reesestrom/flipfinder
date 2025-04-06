@@ -79,7 +79,7 @@ def request_password_reset(email: str = Body(...), db: Session = Depends(get_db)
     print("📨 Reset requested for:", email)
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 1")
 
     # Continue with reset logic...
     return {"message": "Reset email sent"}
@@ -92,7 +92,7 @@ def set_email_days(data: dict = Body(...), db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 2")
 
     user.email_days = ",".join(str(day) for day in days)
     db.commit()
@@ -109,7 +109,7 @@ def change_email(data: ChangeEmailRequest, db: Session = Depends(get_db)):
     # Find current user by old email
     user = db.query(User).filter(User.email == data.old_email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 3")
 
     # Update the email
     user.email = data.new_email
@@ -126,29 +126,34 @@ class SignupRequest(BaseModel):
 
 @app.post("/delete_account")
 def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
-    email = data.get("email")
-    user = db.query(User).filter(User.email == email).first()
-    print(email)
-
+    print(user_email, "here is the email")
+    user_email = data.get("userEmail").strip().lower()  # Normalize the email (trim and lowercase)
+    
+    
+    # Use a case-insensitive query and make sure to remove any extra whitespace
+    user = db.query(User).filter(User.email == user_email).first()
+    
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # delete related data using the correct model names
+        raise HTTPException(status_code=404, detail=user_email)
+    
+    # Proceed with deletion if user is found
     db.query(SavedSearch).filter(SavedSearch.user_id == user.id).delete()
     db.query(SavedItem).filter(SavedItem.user_id == user.id).delete()
     db.query(SearchResultSnapshot).filter(SearchResultSnapshot.user_id == user.id).delete()
     db.query(EmailedListing).filter(EmailedListing.user_id == user.id).delete()
-
+    
     db.delete(user)
     db.commit()
 
     return {"message": "Account deleted"}
 
+
+
 @app.get("/get_email/{username}")
 def get_email(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 4")
     return {"email": user.email}
 
 
@@ -156,7 +161,7 @@ def get_email(username: str, db: Session = Depends(get_db)):
 def get_email_days(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 5")
 
     if user.email_days:
         try:
@@ -175,7 +180,7 @@ def disable_auto_search(data: dict = Body(...), db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 6")
 
     existing = db.query(SavedSearch).filter_by(user_id=user.id, query_text=query_text).first()
     if not existing:
@@ -198,7 +203,7 @@ def change_username(data: dict = Body(...), db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.username == old).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 7")
 
     user.username = new
     db.commit()
@@ -244,7 +249,7 @@ def save_item(data: dict = Body(...), db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 8")
 
     # Check for duplicate
     existing = db.query(SavedItem).filter(SavedItem.user_id == user.id, SavedItem.url == item["url"]).first()
@@ -273,7 +278,7 @@ def unsave_item(data: dict = Body(...), db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 9")
 
     # Delete saved item by URL
     deleted = db.query(SavedItem).filter_by(user_id=user.id, url=item["url"]).delete()
@@ -286,7 +291,7 @@ def unsave_item(data: dict = Body(...), db: Session = Depends(get_db)):
 def get_saved_items(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 10")
 
     items = db.query(SavedItem).filter(SavedItem.user_id == user.id).all()
 
@@ -303,7 +308,7 @@ def get_saved_items(username: str, db: Session = Depends(get_db)):
 def get_saved_searches(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found 11")
 
     searches = db.query(SavedSearch).filter(SavedSearch.user_id == user.id).all()
 
