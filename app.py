@@ -146,7 +146,7 @@ def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
     db.delete(user)
     db.commit()
 
-    return {"message": "Account deleted"}
+    #return {"message": "Account deleted"}
 
 
 
