@@ -98,7 +98,7 @@ function App() {
         return;
       }
       const data = await res.json();
-      console.log("📬 Pulled email from server:", data.email);
+      //console.log("📬 Pulled email from server:", data.email);
       setUserEmail(data.email);
     } catch (err) {
       console.error("❌ Error fetching user email:", err);
@@ -153,7 +153,7 @@ function App() {
         const res = await fetch(`https://flipfinder.onrender.com/get_email/${username}`);
         const data = await res.json();
         if (res.ok) {
-          console.log("📬 Pulled email from server:", data.email);
+          //console.log("📬 Pulled email from server:", data.email);
           setUserEmail(data.email);  // Set the fetched email
           setTimeout(() => {
             setShowPasswordModal(true); // Ensure modal opens after email is set
@@ -918,7 +918,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             }, `$${item.profit.toFixed(2)}`)
           ]),          
         )
-      ) : React.createElement("p", null, "No results yet."),
+      ) : React.createElement("p", null, "Results will be shown here."),
       React.createElement("div", { className: "saved-box", style: { marginTop: "60px" } },
         React.createElement("h2", null, "⭐ Saved Listings"),
         savedItems.length > 0

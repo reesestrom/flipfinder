@@ -18,6 +18,7 @@ from description_refiner import refine_title_and_condition
 from password_reset import router as reset_router
 from pydantic import BaseModel
 from db import get_db
+import statistics
 
 
 
@@ -452,7 +453,7 @@ def refined_avg_price(query, condition=None):
     data = response.json()
     items = data.get("itemSummaries", [])
     prices = [float(item["price"]["value"]) for item in items if "price" in item]
-    return sum(prices) / len(prices) if prices else -999
+    return statistics.median(prices) if prices else -999
 
 
 import asyncio
