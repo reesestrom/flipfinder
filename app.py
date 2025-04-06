@@ -128,6 +128,7 @@ class SignupRequest(BaseModel):
 def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
     email = data.get("email")
     user = db.query(User).filter(User.email == email).first()
+    print(email)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -140,9 +141,6 @@ def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
 
     db.delete(user)
     db.commit()
-
-    return {"message": "Account deleted"}
-
 
     return {"message": "Account deleted"}
 

@@ -27,10 +27,10 @@ function App() {
   const [emailDays, setEmailDays] = useState([]);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [email, setEmail] = useState(localStorage.getItem("email") || "");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [email, setEmail] = useState("");
 
 
 
@@ -641,21 +641,27 @@ showEmailSchedule && React.createElement(window.EmailScheduleModal, {
     }
   }
 }),
+// Log the email before rendering the modal to ensure it's correct
+
+// Ensure the modal is rendered with the correct `email`
 showDeleteModal && React.createElement(window.DeleteAccountModal, {
-  email,
-  onClose: () => setShowDeleteModal(false),
-  onDelete: async () => {
+  userEmail: userEmail,  // Pass email as userEmail to the modal
+  onClose: () => setShowDeleteModal(false),  // Close the modal when clicked
+  onConfirm: async () => {
+    console.log("Email inside onConfirm:", userEmail);  // Log email inside the onConfirm function
+
     try {
+      console.log("trying to delete", userEmail)
       const res = await fetch("https://flipfinder.onrender.com/delete_account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ userEmail })  // Pass the email for account deletion
       });
 
       if (res.ok) {
         localStorage.removeItem("user");
         alert("✅ Account deleted.");
-        window.location.reload();
+        window.location.reload();  // Reload the page after successful deletion
       } else {
         alert("❌ Failed to delete account.");
       }
@@ -665,6 +671,7 @@ showDeleteModal && React.createElement(window.DeleteAccountModal, {
     }
   }
 }),
+
 showEmailModal && React.createElement(window.ChangeEmailModal, {
   currentEmail: email,
   onClose: () => setShowEmailModal(false),
