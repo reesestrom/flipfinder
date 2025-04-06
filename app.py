@@ -126,8 +126,6 @@ class SignupRequest(BaseModel):
 
 @app.post("/delete_account")
 def delete_account(data: dict = Body(...), db: Session = Depends(get_db)):
-    print(user_email, "here is the email")
-    print(data.userEmail)
     user_email = data.get("userEmail").strip().lower()  # Normalize the email (trim and lowercase)
     print(user_email, "here is the email after")
     
