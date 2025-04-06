@@ -139,16 +139,38 @@ function App() {
     
   }
     
-  function handleOpenPasswordModal() {
-    console.log("🔐 Opening password reset modal...");
+  async function handleOpenPasswordModal() {
     setShowAccountPopup(false);
+   console.log(userEmail)
+   console.log("this is before")
+    // Check if the email is already loaded
     if (userEmail) {
-      console.log("🔐 Opening password reset modal...");
-      setShowPasswordModal(true);
+      console.log("🔐 Opening password reset modal with existing email...");
+      setShowPasswordModal(true); // Modal opens with email already set
     } else {
-      console.warn("⚠️ Tried to open password modal before userEmail was ready.");
-    }
+      console.log("📬 Fetching email before opening the password modal...");
+      try {
+        const res = await fetch(`https://flipfinder.onrender.com/get_email/${username}`);
+        const data = await res.json();
+        if (res.ok) {
+          console.log("📬 Pulled email from server:", data.email);
+          setUserEmail(data.email);  // Set the fetched email
+          setTimeout(() => {
+            setShowPasswordModal(true); // Ensure modal opens after email is set
+          }, 100); // Delay slightly to allow state update to take place
+        } else {
+          console.error("❌ Failed to load email:", data.detail);
+        }
+      } catch (err) {
+        console.error("❌ Error fetching email:", err);
       }
+    }
+  }
+  
+  
+
+  
+  
   
 
   async function handleOpenEmailModal() {
@@ -603,10 +625,7 @@ function App() {
     React.createElement("button", { className: "buttonSecondary", onClick: handleLogOut }, "Log Out"),
 
 showAccountPopup && React.createElement(window.AccountPopup, { onClose: () => setShowAccountPopup(false) }),
-showPasswordModal && React.createElement(window.ChangePasswordModal, {
-  userEmail: email,
-  onClose: () => setShowPasswordModal(false)
-}),
+
 
 showEmailSchedule && React.createElement(window.EmailScheduleModal, {
   username,
@@ -656,6 +675,10 @@ showEmailModal && React.createElement(window.ChangeEmailModal, {
   }
 }),
 
+showPasswordModal && React.createElement(window.ChangePasswordModal, {
+  userEmail: userEmail,
+  onClose: () => setShowPasswordModal(false)
+}),
 
 showUsernameModal && React.createElement(window.ChangeUsernameModal, {
 
