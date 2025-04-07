@@ -44,6 +44,9 @@ from sqlalchemy.orm import Session
 
 app = FastAPI()
 
+refined_cache = {}
+
+
 app.include_router(reset_router)
 app.include_router(auto_search_bp)
 
@@ -490,7 +493,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         import re  # ✅ Add this at the top of the file
         params = {
             "q": query,
-            "limit": "80",
+            "limit": "50",
         }
         # ✅ Add only if ZIP is valid 5-digit number
         if postal_code and re.match(r"^\d{5}$", postal_code):
@@ -556,23 +559,32 @@ def search_ebay(parsed, original_input, postal_code=None):
 
         total_price = price + shipping
 
-        # ✅ NEW: Fetch full item details for actual description
-        item_id = item.get("itemId", "")
-        full_item = fetch_item_details(item_id)
-        description = full_item.get("description", "")
+        # ✅ Only fetch full item details if the title suggests issues
+        title = item.get("title", "").lower()
+        suspicious_terms = ["read", "see desc", "as is", "untested", "issue"]
 
-        title = item.get("title", "")
+        description = ""
+        if any(term in title for term in suspicious_terms):
+            item_id = item.get("itemId", "")
+            full_item = fetch_item_details(item_id)
+            description = full_item.get("description", "")
+
         refinement = refine_title_and_condition(title, description, parsed_condition)
-
         refined_query = refinement["refined_query"]
         adjusted_condition = refinement["adjusted_condition"]
 
-        refined_resale = refined_avg_price(refined_query, adjusted_condition)
+        cache_key = (refined_query, adjusted_condition)
+        if cache_key in refined_cache:
+            refined_resale = refined_cache[cache_key]
+        else:
+            refined_resale = refined_avg_price(refined_query, adjusted_condition)
+            refined_cache[cache_key] = refined_resale
 
         profit = (refined_resale * 0.85) - total_price
         roi = round(profit / total_price, 2) if total_price > 0 else 0
 
         return total_price, profit, roi, price, shipping, refined_query, adjusted_condition, description
+
 
     
 
