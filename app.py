@@ -441,7 +441,7 @@ def refined_avg_price(query, condition=None):
 
     params = {
         "q": query,
-        "limit": "25"
+        "limit": "10"
     }
     if filter_str:
         params["filter"] = filter_str
@@ -624,7 +624,7 @@ def search_ebay(parsed, original_input, postal_code=None):
     all_results = []
     seen_titles = set()
     iteration = 0
-    max_iterations = 10
+    max_iterations = 5
 
     def try_query(q, cond, includes, excludes):
         raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
