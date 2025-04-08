@@ -26,12 +26,13 @@ def get_chrome_driver():
 
     options = Options()
     options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.binary_location = chrome_binary_path
+    options.binary_location = "/usr/local/bin/chrome/chrome"
 
-    service = Service(chromedriver_path)
+    service = Service("/usr/local/bin/chromedriver")
     browser = webdriver.Chrome(service=service, options=options)
+
     print("✅ Browser launched!")
 
     return browser

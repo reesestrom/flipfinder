@@ -1,16 +1,27 @@
 #!/bin/bash
-echo "📦 Installing Chrome & Chromedriver..."
 
-# Download known working version of Chrome (v122) & Chromedriver
-wget -O chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-dpkg -i chrome.deb || apt-get install -fy
+echo "📦 Installing Chromium and Chromedriver manually (Render-safe)..."
 
-wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/122.0.6261.94/chromedriver_linux64.zip
-unzip chromedriver.zip
-chmod +x chromedriver
-mv chromedriver /usr/bin/chromedriver
+mkdir -p /usr/local/bin/chrome
+cd /usr/local/bin/chrome
 
-echo "✅ Installed Chrome & Chromedriver"
+# Download Chromium (Headless shell from Chromium snapshots)
+wget https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/1176782/chrome-linux.zip
+unzip chrome-linux.zip
+mv chrome-linux chrome
+rm chrome-linux.zip
+
+# Download matching chromedriver (version 117.0.5938.62 here)
+wget https://storage.googleapis.com/chromedriver/117.0.5938.62/chromedriver_linux64.zip
+unzip chromedriver_linux64.zip
+mv chromedriver /usr/local/bin/chromedriver
+chmod +x /usr/local/bin/chromedriver
+rm chromedriver_linux64.zip
+
+# Make Chrome executable accessible
+ln -s /usr/local/bin/chrome/chrome /usr/bin/google-chrome
+
+echo "✅ Chrome and Chromedriver installed."
 
 # Launch app
 echo "🚀 Launching app..."
