@@ -42,6 +42,14 @@ def search_facebook_marketplace(refined_query, condition, location_city):
         last_height = new_height
 
     soup = BeautifulSoup(browser.page_source, 'html.parser')
+    # Save full page source for debugging
+    with open("fb_debug.html", "w", encoding="utf-8") as f:
+        f.write(soup.prettify())
+    print("🧪 HTML dumped to fb_debug.html")
+
+    print("🧪 PAGE SOURCE START:")
+    print(browser.page_source[:1000])
+
     browser.quit()
 
     listings = soup.find_all("a", href=True, class_=lambda x: x and "x1i10hfl" in x)
