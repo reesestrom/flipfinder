@@ -1,43 +1,32 @@
 #!/bin/bash
 echo "📦 Installing Chromium & Chromedriver in local folder..."
 
-# Create folder
+# Make directory
 mkdir -p chrome-bin
 cd chrome-bin
 
-# Get latest Chrome for Testing version
-LATEST_VERSION=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json | grep "version" | head -1 | cut -d '"' -f4)
-echo "✅ Latest version: $LATEST_VERSION"
+# Fetch JSON metadata for last known good versions
+JSON=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json)
 
-# Get URLs
-CHROME_URL=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
-  | grep -A5 "\"$LATEST_VERSION\"" \
-  | grep "chrome-linux64" \
-  | grep "url" \
-  | head -1 \
-  | cut -d '"' -f4)
+# Extract URLs using jq
+CHROME_URL=$(echo "$JSON" | jq -r '.channels.Stable.downloads.chrome[] | select(.platform == "linux64") | .url')
+DRIVER_URL=$(echo "$JSON" | jq -r '.channels.Stable.downloads.chromedriver[] | select(.platform == "linux64") | .url')
 
-CHROMEDRIVER_URL=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
-  | grep -A5 "\"$LATEST_VERSION\"" \
-  | grep "chromedriver-linux64" \
-  | grep "url" \
-  | head -1 \
-  | cut -d '"' -f4)
-
-if [[ -z "$CHROME_URL" || -z "$CHROMEDRIVER_URL" ]]; then
+if [[ -z "$CHROME_URL" || -z "$DRIVER_URL" ]]; then
   echo "❌ Failed to extract download URLs."
   exit 1
 fi
 
-# Download and extract
+# Download and extract Chromium
 echo "📥 Downloading Chromium..."
-wget -q "$CHROME_URL" -O chrome.zip
+curl -sSL "$CHROME_URL" -o chrome.zip
 unzip -q chrome.zip
 mv chrome-linux64 chrome
 rm chrome.zip
 
+# Download and extract Chromedriver
 echo "📥 Downloading Chromedriver..."
-wget -q "$CHROMEDRIVER_URL" -O chromedriver.zip
+curl -sSL "$DRIVER_URL" -o chromedriver.zip
 unzip -q chromedriver.zip
 mv chromedriver-linux64/chromedriver .
 chmod +x chromedriver
@@ -48,5 +37,5 @@ cd ..
 echo "✅ Chromium at: $(pwd)/chrome-bin/chrome/chrome"
 echo "✅ Chromedriver at: $(pwd)/chrome-bin/chromedriver"
 
-# Launch your app
+# Start server
 uvicorn app:app --host 0.0.0.0 --port 10000
