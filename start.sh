@@ -1,29 +1,38 @@
 #!/bin/bash
-
 echo "📦 Installing Chromium & Chromedriver in local folder..."
 
 mkdir -p chrome-bin
 cd chrome-bin
 
-# Download stable Chromium build (v117 works well)
-wget https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/1172525/chrome-linux.zip
-unzip chrome-linux.zip
-mv chrome-linux chrome
-rm chrome-linux.zip
+# Download latest stable version number of Chrome
+LATEST_VERSION=$(curl -sS https://omahaproxy.appspot.com/linux | grep stable | awk -F',' '{print $3}' | head -n1)
+CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" | grep -A 1 "\"$LATEST_VERSION\"" | grep "chromedriver-linux64" | grep "url" | cut -d '"' -f 4)
 
-# Download matching Chromedriver for Chromium v117
-wget https://chromedriver.storage.googleapis.com/117.0.5938.62/chromedriver_linux64.zip
-unzip chromedriver_linux64.zip
+# Fallback if parsing fails
+if [ -z "$CHROMEDRIVER_VERSION" ]; then
+  echo "❌ Failed to fetch ChromeDriver version for $LATEST_VERSION"
+  exit 1
+fi
+
+# Download and unzip Chromedriver
+wget -q "$CHROMEDRIVER_VERSION" -O chromedriver.zip
+unzip -q chromedriver.zip
+mv chromedriver-linux64/chromedriver .
 chmod +x chromedriver
-rm chromedriver_linux64.zip
+rm -rf chromedriver.zip chromedriver-linux64
+
+# Use Puppeteer's Chromium (optional, if you're still stuck)
+CHROME_URL="https://storage.googleapis.com/chrome-for-testing-public/$LATEST_VERSION/linux64/chrome-linux64.zip"
+wget -q $CHROME_URL -O chrome.zip
+unzip -q chrome.zip
+mv chrome-linux64 chrome
+chmod +x chrome/chrome
+rm chrome.zip
 
 cd ..
 
-export CHROME_PATH=$(pwd)/chrome-bin/chrome/chrome
-export CHROMEDRIVER_PATH=$(pwd)/chrome-bin/chromedriver
+echo "✅ Chromium at: $(pwd)/chrome-bin/chrome/chrome"
+echo "✅ Chromedriver at: $(pwd)/chrome-bin/chromedriver"
 
-echo "✅ Chromium at: $CHROME_PATH"
-echo "✅ Chromedriver at: $CHROMEDRIVER_PATH"
-
-echo "🚀 Starting app..."
+# Start your app
 uvicorn app:app --host 0.0.0.0 --port 10000
