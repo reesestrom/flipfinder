@@ -472,7 +472,7 @@ function App() {
     setIsLoading(true);
     setResults([]);
     setParsedQueries([]);
-    setLocalResults([]); // 🔄 Reset local listings
+    setLocalResults([]);
     setListingsSearched(0);
   
     const evtSource = new EventSource("https://flipfinder.onrender.com/events");
@@ -512,22 +512,26 @@ function App() {
         setParsedQueries([...parsedSet]);
   
         // === Facebook Marketplace Local Search ===
-        if(locationReady) {const localRes = await fetch("https://flipfinder.onrender.com/local_search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            search: query,
-            city: userCity || "saltlakecity"
-          })
-        });
+        if (locationReady) {
+          const localRes = await fetch("https://flipfinder.onrender.com/local_search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              search: query,
+              city: userCity || "saltlakecity"
+            })
+          });
   
-        if (localRes.ok) {
           const localData = await localRes.json();
-          allLocalResults = [...allLocalResults, ...localData.results];
-          setLocalResults([...allLocalResults]);
-        }
-      }
-        else {
+          console.log("📦 Local Search Response:", localData);
+  
+          if (Array.isArray(localData.results)) {
+            allLocalResults = [...allLocalResults, ...localData.results];
+            setLocalResults([...allLocalResults]);
+          } else {
+            console.warn("⚠️ No valid 'results' array returned from local_search:", localData);
+          }
+        } else {
           setShowLocationWarning(true);
         }
   
@@ -537,10 +541,11 @@ function App() {
       alert("Error performing one of the searches.");
       console.error("Search error:", error);
     } finally {
-      evtSource.close(); // ✅ Clean up
+      evtSource.close();
       setIsLoading(false);
     }
   }
+  
   
 
   
