@@ -7,34 +7,32 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
-load_dotenv()
 
 from description_refiner import refine_title_and_condition
 from price_estimator import refined_avg_price
 
-def get_chrome_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--remote-debugging-port=9222")
+load_dotenv()
 
-    chrome_path = "/usr/bin/google-chrome"  # Render uses this path if Chromium is installed
-    driver_path = "/usr/bin/chromedriver"   # Update if you place it elsewhere
+def get_chrome_driver():
+    chrome_path = "/usr/bin/chromium"
+    driver_path = "/usr/bin/chromedriver"
+
+    options = Options()
+    options.binary_location = chrome_path
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
 
     service = Service(executable_path=driver_path)
-    return webdriver.Chrome(service=service, options=chrome_options)
+    return webdriver.Chrome(service=service, options=options)
+
 
 def search_facebook_marketplace(refined_query, condition, location_city):
     print("🌐 Starting Facebook Marketplace scrape...")
 
-    chrome_install = ChromeDriverManager().install()
-    folder = os.path.dirname(chrome_install)
-    chromedriver_path = os.path.join(folder, "chromedriver.exe")
+
     days_listed=15
 
     options = Options()
