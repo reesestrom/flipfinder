@@ -87,6 +87,7 @@ def search_facebook_marketplace(refined_query, condition, location_city):
     print(f"🔗 Found {len(links)} <a> tags")
 
     query_words = refined_query.lower().split()
+    print(query_words)
     matches = [link for link in links if any(word in link.text.lower() for word in query_words)]
     print(f"🔗 Matched {len(matches)} anchor tags containing any of: {query_words}")
 
