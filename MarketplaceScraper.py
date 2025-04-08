@@ -8,6 +8,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from dotenv import load_dotenv
+from urllib.parse import quote
 
 from description_refiner import refine_title_and_condition
 from price_estimator import refined_avg_price
@@ -47,8 +48,8 @@ def search_facebook_marketplace(refined_query, condition, location_city):
 
     browser = get_chrome_driver()
 
-    url = f"https://www.facebook.com/marketplace/{location_city}/search?query={refined_query}&daysSinceListed={days_listed}"
-    print(f"🔎 Navigating to: {url}")
+    encoded_query = quote(refined_query)
+    url = f"https://www.facebook.com/marketplace/{location_city}/search?query={encoded_query}&daysSinceListed={days_listed}"    print(f"🔎 Navigating to: {url}")
     browser.get(url)
     time.sleep(5)
 
