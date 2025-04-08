@@ -49,7 +49,8 @@ def search_facebook_marketplace(refined_query, condition, location_city):
     browser = get_chrome_driver()
 
     encoded_query = quote(refined_query)
-    url = f"https://www.facebook.com/marketplace/{location_city}/search?query={encoded_query}&daysSinceListed={days_listed}"    print(f"🔎 Navigating to: {url}")
+    url = f"https://www.facebook.com/marketplace/{location_city}/search?query={encoded_query}&daysSinceListed={days_listed}"
+    print(f"🔎 Navigating to: {url}")
     browser.get(url)
     time.sleep(5)
 
