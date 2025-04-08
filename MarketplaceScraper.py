@@ -26,6 +26,15 @@ def get_chrome_driver():
     options.add_argument("--disable-gpu")
 
     service = Service(executable_path=driver_path)
+    print("🔍 Checking driver path...")
+    print("Driver path:", driver_path)
+    print("Binary path:", chrome_path)
+
+    print("📂 Files in /usr/bin:")
+    print(os.listdir("/usr/bin"))
+
+    print("🚀 Launching browser...")
+
     return webdriver.Chrome(service=service, options=options)
 
 
