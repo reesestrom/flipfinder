@@ -513,25 +513,32 @@ function App() {
   
         // === Facebook Marketplace Local Search ===
         if (locationReady) {
+          const localQueryPayload = {
+            search: parsed.query,
+            condition: parsed.condition || "any",
+            city: userCity || "saltlakecity"
+          };
+  
+          console.log("📦 Submitting Local Marketplace Search:", localQueryPayload);
+  
           const localRes = await fetch("https://flipfinder.onrender.com/local_search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              search: query,
-              city: userCity || "saltlakecity"
-            })
+            body: JSON.stringify(localQueryPayload)
           });
   
           const localData = await localRes.json();
-          console.log("📦 Local Search Response:", localData);
+          console.log("📬 Raw Local Search Response:", localData);
   
           if (Array.isArray(localData.results)) {
+            console.log(`✅ Found ${localData.results.length} local listings`);
             allLocalResults = [...allLocalResults, ...localData.results];
             setLocalResults([...allLocalResults]);
           } else {
-            console.warn("⚠️ No valid 'results' array returned from local_search:", localData);
+            console.warn("⚠️ Unexpected local_search response format:", localData);
           }
         } else {
+          console.warn("⚠️ Skipping local search – location access not granted");
           setShowLocationWarning(true);
         }
   
@@ -539,12 +546,13 @@ function App() {
       }
     } catch (error) {
       alert("Error performing one of the searches.");
-      console.error("Search error:", error);
+      console.error("❌ Search error:", error);
     } finally {
       evtSource.close();
       setIsLoading(false);
     }
   }
+  
   
   
 

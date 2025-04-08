@@ -86,13 +86,10 @@ def search_facebook_marketplace(refined_query, condition, location_city):
     links = soup.find_all("a")
     print(f"🔗 Found {len(links)} <a> tags")
 
-    matches = []
-    for link in links:
-        if refined_query.lower() in link.text.lower():
-            matches.append(link)
-        if len(matches) >= 10:  # ✅ Limit to 25
-            break
-    print(f"🎯 Filtered {len(matches)} potential matches")
+    query_words = refined_query.lower().split()
+    matches = [link for link in links if any(word in link.text.lower() for word in query_words)]
+    print(f"🔗 Matched {len(matches)} anchor tags containing any of: {query_words}")
+
 
     extracted = []
 
