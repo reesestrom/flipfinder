@@ -31,6 +31,12 @@ function App() {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [email, setEmail] = useState("");
+  const [userCity, setUserCity] = useState("");
+  const [localResults, setLocalResults] = useState([]);
+  const [locationReady, setLocationReady] = useState(false);
+  const [showLocationWarning, setShowLocationWarning] = useState(false);
+
+
 
 
 
@@ -43,14 +49,38 @@ function App() {
     const storedUser = localStorage.getItem("user");
     const storedPrefs = localStorage.getItem("userPreferences");
     const storedZip = localStorage.getItem("zip");
+    const storedCity = localStorage.getItem("city");
     
-  
+    if (storedZip) setUserZip(storedZip);
+    if (storedCity) setUserCity(storedCity);
+    
+    if (storedZip && storedCity) {
+      setLocationReady(true);
+    } else {
+      fetchZipFromLocation()
+        .then((zipInfo) => {
+          if (zipInfo) {
+            const { zip, city } = zipInfo;
+            const citySlug = city.replace(/\s+/g, "").toLowerCase();
+            setUserZip(zip);
+            setUserCity(citySlug);
+            setLocationReady(true);
+    
+            localStorage.setItem("zip", zip);
+            localStorage.setItem("city", citySlug);
+          }
+        })
+        .catch(err => {
+          console.warn("Could not get ZIP/city from geolocation:", err);
+          setLocationReady(false);
+        });
+    }    
+    
     if (storedUser) {
       setUsername(storedUser);
       setIsAuthenticated(true);
       setUserPreferences(JSON.parse(storedPrefs || "[]"));
-  
-      // 🔁 Load saved auto-searches
+    
       fetch(`https://flipfinder.onrender.com/user_auto_searches/${storedUser}`)
         .then(res => res.json())
         .then(data => {
@@ -58,23 +88,32 @@ function App() {
             .filter(s => s.auto_search_enabled)
             .map(s => s.query_text);
           setAutoSearches(enabled);
-          setSearchInputs(enabled.length > 0 ? enabled : [""]); // 👈 this is what was missing
+          setSearchInputs(enabled.length > 0 ? enabled : [""]);
         })
         .catch(err => console.error("Failed to load auto-searches:", err));
     }
+    
     if (storedZip) {
       setUserZip(storedZip);
+    }
+    
+    if (storedCity) {
+      setUserCity(storedCity);
     } else {
-      // ✅ Try to detect ZIP via geolocation and store it
       fetchZipFromLocation()
-        .then(zip => {
-          if (zip) {
+        .then((zipInfo) => {
+          if (zipInfo) {
+            const { zip, city } = zipInfo;
+            const citySlug = city.replace(/\s+/g, "").toLowerCase();
+    
             setUserZip(zip);
+            setUserCity(citySlug);
             localStorage.setItem("zip", zip);
+            localStorage.setItem("city", citySlug);
           }
         })
         .catch(err => console.warn("Could not get ZIP from geolocation:", err));
-    }
+    }    
   }, []);
  
   useEffect(() => {
@@ -281,15 +320,22 @@ function App() {
           );
   
           const data = await response.json();
-          const zip = data?.results?.[0]?.components?.postcode;
-          resolve(zip || null);
+          const zip = data?.results?.[0]?.components?.postcode || "";
+          const city =
+            data?.results?.[0]?.components?.city ||
+            data?.results?.[0]?.components?.town ||
+            data?.results?.[0]?.components?.village ||
+            "";
+  
+          resolve({ zip, city });
         } catch (err) {
-          console.error("Failed to fetch ZIP code from OpenCage:", err);
+          console.error("Failed to fetch ZIP/city from OpenCage:", err);
           reject(err);
         }
       }, reject);
     });
   }
+  
   
   
   
@@ -364,7 +410,7 @@ function App() {
   }
 
   function handleSelectPreference(pref) {
-    if (searchInputs.length >= 3 && !isSubscribed) {
+    if (searchInputs.length >= 2 && !isSubscribed) {
       setShowPaywall(true);
       return;
     }
@@ -378,7 +424,7 @@ function App() {
   }
 
   function addSearchField() {
-    if (searchInputs.length >= 3 && !isSubscribed) {
+    if (searchInputs.length >= 2 && !isSubscribed) {
       setShowPaywall(true);
       setClassicLimitReached(true); // 👈 show message
       return;
@@ -423,54 +469,79 @@ function App() {
   
 
   async function handleSearch() {
-  setIsLoading(true);
-  setResults([]);
-  setParsedQueries([]);
-  setListingsSearched(0);
-
-  const evtSource = new EventSource("https://flipfinder.onrender.com/events");
-  evtSource.onmessage = function (event) {
-    if (event.data === "increment") {
-      setListingsSearched(prev => prev + 1);
+    setIsLoading(true);
+    setResults([]);
+    setParsedQueries([]);
+    setLocalResults([]); // 🔄 Reset local listings
+    setListingsSearched(0);
+  
+    const evtSource = new EventSource("https://flipfinder.onrender.com/events");
+    evtSource.onmessage = function (event) {
+      if (event.data === "increment") {
+        setListingsSearched(prev => prev + 1);
+      }
+    };
+  
+    let allResults = [];
+    let parsedSet = [];
+    let allLocalResults = [];
+  
+    try {
+      for (let i = 0; i < searchInputs.length; i++) {
+        const query = searchInputs[i];
+  
+        // === eBay AI Search ===
+        const res = await fetch("https://flipfinder.onrender.com/ai_search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            search: query,
+            postalCode: userZip || "10001"
+          }),
+        });
+  
+        if (!res.ok) throw new Error("Search failed");
+  
+        const data = await res.json();
+        const parsed = data.parsed;
+        const results = data.results.map(r => ({ ...r, _parsed: parsed }));
+  
+        allResults = [...allResults, ...results];
+        parsedSet = [...parsedSet, parsed];
+        setResults([...allResults]);
+        setParsedQueries([...parsedSet]);
+  
+        // === Facebook Marketplace Local Search ===
+        if(locationReady) {const localRes = await fetch("https://flipfinder.onrender.com/local_search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            search: query,
+            city: userCity || "saltlakecity"
+          })
+        });
+  
+        if (localRes.ok) {
+          const localData = await localRes.json();
+          allLocalResults = [...allLocalResults, ...localData.results];
+          setLocalResults([...allLocalResults]);
+        }
+      }
+        else {
+          setShowLocationWarning(true);
+        }
+  
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    } catch (error) {
+      alert("Error performing one of the searches.");
+      console.error("Search error:", error);
+    } finally {
+      evtSource.close(); // ✅ Clean up
+      setIsLoading(false);
     }
-  };
-
-  let allResults = [];
-  let parsedSet = [];
-
-  try {
-    for (let i = 0; i < searchInputs.length; i++) {
-      const query = searchInputs[i];
-      const res = await fetch("https://flipfinder.onrender.com/ai_search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          search: query,
-          postalCode: userZip || "10001"
-        })
-      });
-
-      if (!res.ok) throw new Error("Search failed");
-
-      const data = await res.json();
-      const parsed = data.parsed;
-      const results = data.results.map(r => ({ ...r, _parsed: parsed }));
-
-      allResults = [...allResults, ...results];
-      parsedSet = [...parsedSet, parsed];
-      setResults([...allResults]);
-      setParsedQueries([...parsedSet]);
-
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-  } catch (error) {
-    alert("Error performing one of the searches.");
-    console.error("Search error:", error);
-  } finally {
-    evtSource.close(); // ✅ Clean up
-    setIsLoading(false);
   }
-}
+  
 
   
   
@@ -771,8 +842,8 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
               onChange: async (e) => {
                 const isChecked = e.target.checked;
               
-                // HARD LIMIT: Don't add more than 3
-                if (isChecked && autoSearches.length > 3) {
+                // HARD LIMIT: Don't add more than 2
+                if (isChecked && autoSearches.length > 2) {
                   return; // silently ignore
                 }
               
@@ -791,6 +862,16 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             React.createElement("span", { className: "slider" })
           )          
         ),
+        showLocationWarning &&
+        React.createElement("p", {
+          style: {
+            color: "red",
+            fontSize: "14px",
+            marginTop: "6px",
+            marginBottom: "10px",
+            textAlign: "center"
+          }
+        }, "Enable location access to see Facebook Marketplace listings"),
         classicLimitReached &&
         React.createElement("p", {
           style: {
@@ -800,7 +881,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             marginBottom: "10px",
             textAlign: "center"
           }
-        }, "You’ve reached the maximum of 3 searches."),
+        }, "You’ve reached the maximum of 2 searches."),
     
         // Optional "Remove" button if there's more than 1 field
         searchInputs.length > 1 &&

@@ -1,7 +1,6 @@
 import os
 import re
 import time
-import statistics
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -16,24 +15,28 @@ from description_refiner import refine_title_and_condition
 from app import refined_avg_price
 
 
-
-# --- Main search function ---
 def search_facebook_marketplace(refined_query, condition, location_city):
+    print("🌐 Starting Facebook Marketplace scrape...")
+
     chrome_install = ChromeDriverManager().install()
     folder = os.path.dirname(chrome_install)
     chromedriver_path = os.path.join(folder, "chromedriver.exe")
+    days_listed=15
 
     options = Options()
-    #options.add_argument("--headless=new")
+    # options.add_argument("--headless=new")  # Disable for debugging
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
     browser = webdriver.Chrome(service=Service(chromedriver_path), options=options)
 
-    url = f"https://www.facebook.com/marketplace/{location_city}/search?query={refined_query}"
+    url = f"https://www.facebook.com/marketplace/{location_city}/search?query={refined_query}&daysSinceListed={days_listed}"
+    print(f"🔎 Navigating to: {url}")
     browser.get(url)
+    time.sleep(5)
 
-    # Close any pop-ups (login/cookies)
+    # Close any popups
     for xpath in [
         '//div[@aria-label="Close" and @role="button"]',
         '//div[@aria-label="Decline optional cookies" and @role="button"]'
@@ -41,12 +44,13 @@ def search_facebook_marketplace(refined_query, condition, location_city):
         try:
             button = browser.find_element(By.XPATH, xpath)
             button.click()
+            print(f"✅ Closed popup with XPath: {xpath}")
         except:
             pass
 
-    # Scroll to load more listings
+    # Scroll to load more items
     last_height = browser.execute_script("return document.body.scrollHeight")
-    while True:
+    for _ in range(3):  # Scroll a few times
         browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(3)
         new_height = browser.execute_script("return document.body.scrollHeight")
@@ -54,12 +58,26 @@ def search_facebook_marketplace(refined_query, condition, location_city):
             break
         last_height = new_height
 
-    # Parse results
-    soup = BeautifulSoup(browser.page_source, "html.parser")
+    html = browser.page_source
     browser.quit()
+    print("✅ Finished page load, parsing HTML...")
 
+    # Optional: Save HTML to inspect what's being loaded
+    with open("facebook_debug.html", "w", encoding="utf-8") as f:
+        f.write(html)
+
+    soup = BeautifulSoup(html, "html.parser")
     links = soup.find_all("a")
-    matches = [link for link in links if refined_query.lower() in link.text.lower()]
+    print(f"🔗 Found {len(links)} <a> tags")
+
+    matches = []
+    for link in links:
+        if refined_query.lower() in link.text.lower():
+            matches.append(link)
+        if len(matches) >= 10:  # ✅ Limit to 25
+            break
+    print(f"🎯 Filtered {len(matches)} potential matches")
+
     extracted = []
 
     for link in matches:
@@ -67,6 +85,8 @@ def search_facebook_marketplace(refined_query, condition, location_city):
             text = list(link.stripped_strings)
             if len(text) < 3:
                 continue
+
+            print(f"🧠 Raw text block: {text}")
 
             price_line = next((l for l in text if re.search(r"\d[\d,.]*", l)), None)
             price = float(re.sub(r"[^\d.]", "", price_line)) if price_line else None
@@ -84,7 +104,7 @@ def search_facebook_marketplace(refined_query, condition, location_city):
             if resale_estimate <= 0:
                 continue
 
-            profit = (resale_estimate * 0.85) - price
+            profit = (resale_estimate) - price
             if profit <= 0:
                 continue
 
@@ -104,16 +124,21 @@ def search_facebook_marketplace(refined_query, condition, location_city):
             print("❌ Error extracting item:", e)
             continue
 
+    print(f"✅ Extracted {len(extracted)} profitable items")
+
     # Sort by profit, limit to top 5
     top_listings = sorted(extracted, key=lambda x: x["profit"], reverse=True)[:5]
     return top_listings
+
+
 if __name__ == "__main__":
-    test_query = "KitchenAid Stand Mixer"
+    test_query = "KitchenAid Mixer"
     test_condition = "used"
-    test_city = "saltlakecity"  # or any city supported by Facebook Marketplace
+    test_city = "saltlakecity"
 
     results = search_facebook_marketplace(test_query, test_condition, test_city)
 
+    print("📦 FINAL RESULTS:")
     for i, item in enumerate(results, 1):
         print(f"\nResult #{i}")
         print(f"Title     : {item['title']}")
