@@ -15,27 +15,26 @@ from price_estimator import refined_avg_price
 load_dotenv()
 
 def get_chrome_driver():
-    chrome_path = "/usr/bin/chromium"
-    driver_path = "/usr/bin/chromedriver"
+    print("🌐 Starting Facebook Marketplace scrape...")
+    print("🔍 Checking driver path...")
+
+    chromedriver_path = "/usr/bin/chromedriver"
+    chrome_binary_path = "/usr/bin/google-chrome"
+
+    print(f"Driver path: {chromedriver_path}")
+    print(f"Binary path: {chrome_binary_path}")
 
     options = Options()
-    options.binary_location = chrome_path
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
+    options.binary_location = chrome_binary_path
 
-    service = Service(executable_path=driver_path)
-    print("🔍 Checking driver path...")
-    print("Driver path:", driver_path)
-    print("Binary path:", chrome_path)
+    service = Service(chromedriver_path)
+    browser = webdriver.Chrome(service=service, options=options)
+    print("✅ Browser launched!")
 
-    print("📂 Files in /usr/bin:")
-    print(os.listdir("/usr/bin"))
-
-    print("🚀 Launching browser...")
-
-    return webdriver.Chrome(service=service, options=options)
+    return browser
 
 
 def search_facebook_marketplace(refined_query, condition, location_city):
