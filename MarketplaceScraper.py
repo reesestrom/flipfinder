@@ -14,6 +14,21 @@ load_dotenv()
 from description_refiner import refine_title_and_condition
 from price_estimator import refined_avg_price
 
+def get_chrome_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+
+    chrome_path = "/usr/bin/google-chrome"  # Render uses this path if Chromium is installed
+    driver_path = "/usr/bin/chromedriver"   # Update if you place it elsewhere
+
+    service = Service(executable_path=driver_path)
+    return webdriver.Chrome(service=service, options=chrome_options)
+
 def search_facebook_marketplace(refined_query, condition, location_city):
     print("🌐 Starting Facebook Marketplace scrape...")
 
@@ -28,7 +43,7 @@ def search_facebook_marketplace(refined_query, condition, location_city):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    browser = webdriver.Chrome(service=Service(chromedriver_path), options=options)
+    browser = get_chrome_driver()
 
     url = f"https://www.facebook.com/marketplace/{location_city}/search?query={refined_query}&daysSinceListed={days_listed}"
     print(f"🔎 Navigating to: {url}")
