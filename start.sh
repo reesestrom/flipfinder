@@ -1,38 +1,52 @@
 #!/bin/bash
 echo "📦 Installing Chromium & Chromedriver in local folder..."
 
+# Create folder
 mkdir -p chrome-bin
 cd chrome-bin
 
-# Download latest stable version number of Chrome
-LATEST_VERSION=$(curl -sS https://omahaproxy.appspot.com/linux | grep stable | awk -F',' '{print $3}' | head -n1)
-CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" | grep -A 1 "\"$LATEST_VERSION\"" | grep "chromedriver-linux64" | grep "url" | cut -d '"' -f 4)
+# Get latest Chrome for Testing version
+LATEST_VERSION=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json | grep "version" | head -1 | cut -d '"' -f4)
+echo "✅ Latest version: $LATEST_VERSION"
 
-# Fallback if parsing fails
-if [ -z "$CHROMEDRIVER_VERSION" ]; then
-  echo "❌ Failed to fetch ChromeDriver version for $LATEST_VERSION"
+# Get URLs
+CHROME_URL=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
+  | grep -A5 "\"$LATEST_VERSION\"" \
+  | grep "chrome-linux64" \
+  | grep "url" \
+  | head -1 \
+  | cut -d '"' -f4)
+
+CHROMEDRIVER_URL=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
+  | grep -A5 "\"$LATEST_VERSION\"" \
+  | grep "chromedriver-linux64" \
+  | grep "url" \
+  | head -1 \
+  | cut -d '"' -f4)
+
+if [[ -z "$CHROME_URL" || -z "$CHROMEDRIVER_URL" ]]; then
+  echo "❌ Failed to extract download URLs."
   exit 1
 fi
 
-# Download and unzip Chromedriver
-wget -q "$CHROMEDRIVER_VERSION" -O chromedriver.zip
+# Download and extract
+echo "📥 Downloading Chromium..."
+wget -q "$CHROME_URL" -O chrome.zip
+unzip -q chrome.zip
+mv chrome-linux64 chrome
+rm chrome.zip
+
+echo "📥 Downloading Chromedriver..."
+wget -q "$CHROMEDRIVER_URL" -O chromedriver.zip
 unzip -q chromedriver.zip
 mv chromedriver-linux64/chromedriver .
 chmod +x chromedriver
 rm -rf chromedriver.zip chromedriver-linux64
-
-# Use Puppeteer's Chromium (optional, if you're still stuck)
-CHROME_URL="https://storage.googleapis.com/chrome-for-testing-public/$LATEST_VERSION/linux64/chrome-linux64.zip"
-wget -q $CHROME_URL -O chrome.zip
-unzip -q chrome.zip
-mv chrome-linux64 chrome
-chmod +x chrome/chrome
-rm chrome.zip
 
 cd ..
 
 echo "✅ Chromium at: $(pwd)/chrome-bin/chrome/chrome"
 echo "✅ Chromedriver at: $(pwd)/chrome-bin/chromedriver"
 
-# Start your app
+# Launch your app
 uvicorn app:app --host 0.0.0.0 --port 10000
