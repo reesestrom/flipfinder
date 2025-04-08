@@ -9,6 +9,8 @@ import re
 import os
 from description_refiner import refine_title_and_condition
 from price_estimator import refined_avg_price
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 def get_chrome_driver():
@@ -29,17 +31,23 @@ def search_facebook_marketplace(refined_query, condition, location_city):
     url = f"https://www.facebook.com/marketplace/{location_city}/search?query={encoded_query}&daysSinceListed={days_listed}"
     print(f"🔎 Navigating to: {url}")
     browser.get(url)
-    time.sleep(5)
+    try:
+        # Wait up to 12 seconds for listing container to appear
+        WebDriverWait(browser, 12).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/marketplace/item/']"))
+        )
+        print("✅ Listings appear to be loaded.")
+    except Exception as e:
+        print("⚠️ Listings did not load in time:", e)
 
-    # Scroll to ensure listings load
-    last_height = browser.execute_script("return document.body.scrollHeight")
-    while True:
+    SCROLL_PAUSE = 2
+    scroll_attempts = 5
+
+    for i in range(scroll_attempts):
         browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(3)
-        new_height = browser.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-            break
-        last_height = new_height
+        print(f"🌀 Scrolling... attempt {i+1}")
+        time.sleep(SCROLL_PAUSE)
+
 
     soup = BeautifulSoup(browser.page_source, 'html.parser')
     # Save full page source for debugging
