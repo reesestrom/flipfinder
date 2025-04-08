@@ -28,10 +28,13 @@ def get_chrome_driver():
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
-    options.binary_location = "/usr/local/bin/chrome/chrome"
+    options.binary_location = os.environ.get("CHROME_PATH", "/usr/bin/google-chrome")
 
-    service = Service("/usr/local/bin/chromedriver")
+    chromedriver_path = os.environ.get("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
+    service = Service(chromedriver_path)
+
     browser = webdriver.Chrome(service=service, options=options)
+
 
     print("✅ Browser launched!")
 

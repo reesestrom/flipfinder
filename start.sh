@@ -1,28 +1,29 @@
 #!/bin/bash
 
-echo "📦 Installing Chromium and Chromedriver manually (Render-safe)..."
+echo "📦 Installing Chromium & Chromedriver in local folder..."
 
-mkdir -p /usr/local/bin/chrome
-cd /usr/local/bin/chrome
+mkdir -p chrome-bin
+cd chrome-bin
 
-# Download Chromium (Headless shell from Chromium snapshots)
-wget https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/1176782/chrome-linux.zip
+# Download stable Chromium build (v117 works well)
+wget https://storage.googleapis.com/chromium-browser-snapshots/Linux_x64/1172525/chrome-linux.zip
 unzip chrome-linux.zip
 mv chrome-linux chrome
 rm chrome-linux.zip
 
-# Download matching chromedriver (version 117.0.5938.62 here)
-wget https://storage.googleapis.com/chromedriver/117.0.5938.62/chromedriver_linux64.zip
+# Download matching Chromedriver for Chromium v117
+wget https://chromedriver.storage.googleapis.com/117.0.5938.62/chromedriver_linux64.zip
 unzip chromedriver_linux64.zip
-mv chromedriver /usr/local/bin/chromedriver
-chmod +x /usr/local/bin/chromedriver
+chmod +x chromedriver
 rm chromedriver_linux64.zip
 
-# Make Chrome executable accessible
-ln -s /usr/local/bin/chrome/chrome /usr/bin/google-chrome
+cd ..
 
-echo "✅ Chrome and Chromedriver installed."
+export CHROME_PATH=$(pwd)/chrome-bin/chrome/chrome
+export CHROMEDRIVER_PATH=$(pwd)/chrome-bin/chromedriver
 
-# Launch app
-echo "🚀 Launching app..."
+echo "✅ Chromium at: $CHROME_PATH"
+echo "✅ Chromedriver at: $CHROMEDRIVER_PATH"
+
+echo "🚀 Starting app..."
 uvicorn app:app --host 0.0.0.0 --port 10000
