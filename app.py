@@ -22,6 +22,8 @@ import statistics
 from pydantic import BaseModel
 from MarketplaceScraper import search_facebook_marketplace
 from description_refiner import refine_title_and_condition
+from price_estimator import refined_avg_price
+
 
 
 
@@ -440,49 +442,6 @@ Example format:
         print("Failed to parse OpenAI response:", response.choices[0].message.content)
         raise HTTPException(status_code=500, detail="Failed to parse OpenAI response")
 
-
-def refined_avg_price(query, condition=None):
-    url = "https://api.ebay.com/buy/browse/v1/item_summary/search"
-    headers = {
-        "Authorization": f"Bearer {get_ebay_token()}",
-        "Content-Type": "application/json",
-    }
-
-    # eBay condition ID mapping
-    condition_map = {
-        "new": "1000",
-        "open box": "1500",
-        "certified refurbished": "2000",
-        "seller refurbished": "2500",
-        "used": "3000",
-        "for parts": "7000",
-        "not working": "7000",
-        "any": None,
-        "not specified": None
-    }
-
-    filters = []
-    condition_key = condition.lower() if condition else None
-    condition_id = condition_map.get(condition_key)
-    if condition_id:
-        filters.append(f"conditionIds:{{{condition_id}}}")
-    filter_str = ",".join(filters) if filters else None
-
-    params = {
-        "q": query,
-        "limit": "10"
-    }
-    if filter_str:
-        params["filter"] = filter_str
-
-    response = requests.get(url, headers=headers, params=params)
-    if response.status_code != 200:
-        return 0
-
-    data = response.json()
-    items = data.get("itemSummaries", [])
-    prices = [float(item["price"]["value"]) for item in items if "price" in item]
-    return statistics.median(prices) if prices else -999
 
 
 import asyncio

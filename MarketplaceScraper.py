@@ -12,8 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from description_refiner import refine_title_and_condition
-from app import refined_avg_price
-
+from price_estimator import refined_avg_price
 
 def search_facebook_marketplace(refined_query, condition, location_city):
     print("🌐 Starting Facebook Marketplace scrape...")
