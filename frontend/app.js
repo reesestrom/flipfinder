@@ -31,13 +31,6 @@ function App() {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [email, setEmail] = useState("");
-  const [userCity, setUserCity] = useState("");
-  const [localResults, setLocalResults] = useState([]);
-  const [locationReady, setLocationReady] = useState(false);
-  const [showLocationWarning, setShowLocationWarning] = useState(false);
-
-
-
 
 
   
@@ -49,32 +42,7 @@ function App() {
     const storedUser = localStorage.getItem("user");
     const storedPrefs = localStorage.getItem("userPreferences");
     const storedZip = localStorage.getItem("zip");
-    const storedCity = localStorage.getItem("city");
     
-    if (storedZip) setUserZip(storedZip);
-    if (storedCity) setUserCity(storedCity);
-    
-    if (storedZip && storedCity) {
-      setLocationReady(true);
-    } else {
-      fetchZipFromLocation()
-        .then((zipInfo) => {
-          if (zipInfo) {
-            const { zip, city } = zipInfo;
-            const citySlug = city.replace(/\s+/g, "").toLowerCase();
-            setUserZip(zip);
-            setUserCity(citySlug);
-            setLocationReady(true);
-    
-            localStorage.setItem("zip", zip);
-            localStorage.setItem("city", citySlug);
-          }
-        })
-        .catch(err => {
-          console.warn("Could not get ZIP/city from geolocation:", err);
-          setLocationReady(false);
-        });
-    }    
     
     if (storedUser) {
       setUsername(storedUser);
@@ -95,25 +63,7 @@ function App() {
     
     if (storedZip) {
       setUserZip(storedZip);
-    }
-    
-    if (storedCity) {
-      setUserCity(storedCity);
-    } else {
-      fetchZipFromLocation()
-        .then((zipInfo) => {
-          if (zipInfo) {
-            const { zip, city } = zipInfo;
-            const citySlug = city.replace(/\s+/g, "").toLowerCase();
-    
-            setUserZip(zip);
-            setUserCity(citySlug);
-            localStorage.setItem("zip", zip);
-            localStorage.setItem("city", citySlug);
-          }
-        })
-        .catch(err => console.warn("Could not get ZIP from geolocation:", err));
-    }    
+    }  
   }, []);
  
   useEffect(() => {
@@ -302,39 +252,6 @@ function App() {
     }
   }
 
-
-
-  async function fetchZipFromLocation() {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject("Geolocation not supported");
-        return;
-      }
-  
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        const { latitude, longitude } = position.coords;
-  
-        try {
-          const response = await fetch(
-            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${ZIP_API_KEY}`
-          );
-  
-          const data = await response.json();
-          const zip = data?.results?.[0]?.components?.postcode || "";
-          const city =
-            data?.results?.[0]?.components?.city ||
-            data?.results?.[0]?.components?.town ||
-            data?.results?.[0]?.components?.village ||
-            "";
-  
-          resolve({ zip, city });
-        } catch (err) {
-          console.error("Failed to fetch ZIP/city from OpenCage:", err);
-          reject(err);
-        }
-      }, reject);
-    });
-  }
   
   
   
@@ -511,37 +428,6 @@ function App() {
         setResults([...allResults]);
         setParsedQueries([...parsedSet]);
   
-        // === Facebook Marketplace Local Search ===
-        if (locationReady) {
-          const localQueryPayload = {
-            search: parsed.query,
-            condition: parsed.condition || "any",
-            city: userCity || "saltlakecity"
-          };
-  
-          console.log("📦 Submitting Local Marketplace Search:", localQueryPayload);
-  
-          const localRes = await fetch("https://flipfinder.onrender.com/local_search", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(localQueryPayload)
-          });
-  
-          const localData = await localRes.json();
-          console.log("📬 Raw Local Search Response:", localData);
-  
-          if (Array.isArray(localData.results)) {
-            console.log(`✅ Found ${localData.results.length} local listings`);
-            allLocalResults = [...allLocalResults, ...localData.results];
-            setLocalResults([...allLocalResults]);
-          } else {
-            console.warn("⚠️ Unexpected local_search response format:", localData);
-          }
-        } else {
-          console.warn("⚠️ Skipping local search – location access not granted");
-          setShowLocationWarning(true);
-        }
-  
         await new Promise(resolve => setTimeout(resolve, 0));
       }
     } catch (error) {
@@ -552,11 +438,7 @@ function App() {
       setIsLoading(false);
     }
   }
-  
-  
-  
-
-  
+   
   
 
   if (!isAuthenticated) {
@@ -875,16 +757,6 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             React.createElement("span", { className: "slider" })
           )          
         ),
-        showLocationWarning &&
-        React.createElement("p", {
-          style: {
-            color: "red",
-            fontSize: "14px",
-            marginTop: "6px",
-            marginBottom: "10px",
-            textAlign: "center"
-          }
-        }, "Enable location access to see Facebook Marketplace listings"),
         classicLimitReached &&
         React.createElement("p", {
           style: {

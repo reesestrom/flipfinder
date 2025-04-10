@@ -14,22 +14,17 @@ import asyncio
 message_queue = asyncio.Queue()
 import datetime
 from auto_search import auto_search_bp
-from description_refiner import refine_title_and_condition
 from password_reset import router as reset_router
 from pydantic import BaseModel
 from db import get_db
 import statistics
 from pydantic import BaseModel
-from MarketplaceScraper import search_facebook_marketplace
 from description_refiner import refine_title_and_condition
 from price_estimator import refined_avg_price
 
 
 
 
-class LocalSearchRequest(BaseModel):
-    search: str
-    city: str
 
 
 def log_event(event_type: str, details: str):
@@ -85,26 +80,6 @@ class ChangeEmailRequest(BaseModel):
 
 from fastapi import Body
 
-@app.post("/local_search")
-async def local_search(req: LocalSearchRequest):
-    try:
-        # Refine the query/condition using your AI logic
-        parsed = refine_title_and_condition(req.search, "", "")
-        refined_query = parsed["refined_query"]
-        adjusted_condition = parsed["adjusted_condition"]
-
-        # Use passed-in city directly (already slugified on frontend)
-        city = req.city or "saltlakecity"
-
-        # Search Facebook Marketplace
-        results = search_facebook_marketplace(refined_query, adjusted_condition, city)
-
-        return {
-            "parsed": parsed,
-            "results": results
-        }
-    except Exception as e:
-        return {"error": str(e)}
 
 @app.post("/request_password_reset")
 def request_password_reset(email: str = Body(...), db: Session = Depends(get_db)):
