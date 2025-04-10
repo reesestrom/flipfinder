@@ -1,6 +1,4 @@
 #!/bin/bash
-
-echo "🚀 Starting Flip Finder server..."
-
-# Start FastAPI server (assuming app.py is your entry point)
+echo "Current dir: $(pwd)"
+ls -l
 uvicorn app:app --host 0.0.0.0 --port 10000

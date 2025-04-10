@@ -14,13 +14,11 @@ import asyncio
 message_queue = asyncio.Queue()
 import datetime
 from auto_search import auto_search_bp
+from description_refiner import refine_title_and_condition
 from password_reset import router as reset_router
 from pydantic import BaseModel
 from db import get_db
 import statistics
-from pydantic import BaseModel
-from description_refiner import refine_title_and_condition
-from price_estimator import refined_avg_price
 
 
 
@@ -79,7 +77,6 @@ class ChangeEmailRequest(BaseModel):
     new_email: str
 
 from fastapi import Body
-
 
 @app.post("/request_password_reset")
 def request_password_reset(email: str = Body(...), db: Session = Depends(get_db)):
@@ -375,7 +372,7 @@ Extract a clean, structured search intent from the user's input below.
 
 Make sure:
 - 'query' only includes the product name (no extra words or qualifiers) and should only be a few words long (2-3) (with an emphasis on brand names)
-- 'condition' reflects the user's tolerance for damage (e.g., 'used' if they accept problems) Unless otherwise specified, always assume the condition should be used.
+- 'condition' reflects the user's tolerance for damage (e.g., 'used' if they accept problems)
 - 'include_terms' should highlight key features or models
 - 'exclude_terms' should reflect things the user wants to avoid
 - do not however, add included/excluded terms unledd the search input specifies qualities which the individual is looking for and thus would be relevant to filter 
@@ -417,6 +414,49 @@ Example format:
         print("Failed to parse OpenAI response:", response.choices[0].message.content)
         raise HTTPException(status_code=500, detail="Failed to parse OpenAI response")
 
+
+def refined_avg_price(query, condition=None):
+    url = "https://api.ebay.com/buy/browse/v1/item_summary/search"
+    headers = {
+        "Authorization": f"Bearer {get_ebay_token()}",
+        "Content-Type": "application/json",
+    }
+
+    # eBay condition ID mapping
+    condition_map = {
+        "new": "1000",
+        "open box": "1500",
+        "certified refurbished": "2000",
+        "seller refurbished": "2500",
+        "used": "3000",
+        "for parts": "7000",
+        "not working": "7000",
+        "any": None,
+        "not specified": None
+    }
+
+    filters = []
+    condition_key = condition.lower() if condition else None
+    condition_id = condition_map.get(condition_key)
+    if condition_id:
+        filters.append(f"conditionIds:{{{condition_id}}}")
+    filter_str = ",".join(filters) if filters else None
+
+    params = {
+        "q": query,
+        "limit": "10"
+    }
+    if filter_str:
+        params["filter"] = filter_str
+
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code != 200:
+        return 0
+
+    data = response.json()
+    items = data.get("itemSummaries", [])
+    prices = [float(item["price"]["value"]) for item in items if "price" in item]
+    return statistics.median(prices) if prices else -999
 
 
 import asyncio
@@ -519,6 +559,7 @@ def search_ebay(parsed, original_input, postal_code=None):
 
         total_price = price + shipping
 
+        # ✅ Only fetch full item details if the title suggests issues
         title = item.get("title", "").lower()
         suspicious_terms = ["read", "see desc", "as is", "untested", "issue"]
 
@@ -527,13 +568,8 @@ def search_ebay(parsed, original_input, postal_code=None):
             item_id = item.get("itemId", "")
             full_item = fetch_item_details(item_id)
             description = full_item.get("description", "")
-            refinement = refine_title_and_condition(title, description, parsed_condition)
-        else:
-            refinement = {
-                "refined_query": title,
-                "adjusted_condition": parsed_condition
-            }
 
+        refinement = refine_title_and_condition(title, description, parsed_condition)
         refined_query = refinement["refined_query"]
         adjusted_condition = refinement["adjusted_condition"]
 
@@ -617,6 +653,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
 
     print("⏳ Waiting for initial eBay results...")
+    time.sleep(3)
     if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
         return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
 
@@ -650,7 +687,7 @@ Please try a **new, independent** eBay-style search query:
 - Additionally, do not make adjustments to included and excluded terms by removing, changing, or finding synonms for them
 - Reword the `query` to be simpler or more natural for eBay titles. The query must be only a few words long (2-3) (with an emphasis on brand names)
 - You may simplify or remove unnecessary words from the query and move them to include_terms.
-- Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc. Unless otherwise specified, assume the condition should be used.
+- Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
 - Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing "broken" to "not working")
 - Do NOT add unrelated words like "flipping", "resale", or adjectives like "mint", unless the user originally said so.
 

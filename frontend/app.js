@@ -34,17 +34,23 @@ function App() {
 
 
 
+  
+  
+
+
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     const storedPrefs = localStorage.getItem("userPreferences");
     const storedZip = localStorage.getItem("zip");
     
-    
+  
     if (storedUser) {
       setUsername(storedUser);
       setIsAuthenticated(true);
       setUserPreferences(JSON.parse(storedPrefs || "[]"));
-    
+  
+      // 🔁 Load saved auto-searches
       fetch(`https://flipfinder.onrender.com/user_auto_searches/${storedUser}`)
         .then(res => res.json())
         .then(data => {
@@ -52,14 +58,23 @@ function App() {
             .filter(s => s.auto_search_enabled)
             .map(s => s.query_text);
           setAutoSearches(enabled);
-          setSearchInputs(enabled.length > 0 ? enabled : [""]);
+          setSearchInputs(enabled.length > 0 ? enabled : [""]); // 👈 this is what was missing
         })
         .catch(err => console.error("Failed to load auto-searches:", err));
     }
-    
     if (storedZip) {
       setUserZip(storedZip);
-    }  
+    } else {
+      // ✅ Try to detect ZIP via geolocation and store it
+      fetchZipFromLocation()
+        .then(zip => {
+          if (zip) {
+            setUserZip(zip);
+            localStorage.setItem("zip", zip);
+          }
+        })
+        .catch(err => console.warn("Could not get ZIP from geolocation:", err));
+    }
   }, []);
  
   useEffect(() => {
@@ -248,7 +263,33 @@ function App() {
     }
   }
 
+
+
+  async function fetchZipFromLocation() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject("Geolocation not supported");
+        return;
+      }
   
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+  
+        try {
+          const response = await fetch(
+            `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${ZIP_API_KEY}`
+          );
+  
+          const data = await response.json();
+          const zip = data?.results?.[0]?.components?.postcode;
+          resolve(zip || null);
+        } catch (err) {
+          console.error("Failed to fetch ZIP code from OpenCage:", err);
+          reject(err);
+        }
+      }, reject);
+    });
+  }
   
   
   
@@ -323,7 +364,7 @@ function App() {
   }
 
   function handleSelectPreference(pref) {
-    if (searchInputs.length >= 2 && !isSubscribed) {
+    if (searchInputs.length >= 3 && !isSubscribed) {
       setShowPaywall(true);
       return;
     }
@@ -337,7 +378,7 @@ function App() {
   }
 
   function addSearchField() {
-    if (searchInputs.length >= 2 && !isSubscribed) {
+    if (searchInputs.length >= 3 && !isSubscribed) {
       setShowPaywall(true);
       setClassicLimitReached(true); // 👈 show message
       return;
@@ -382,59 +423,56 @@ function App() {
   
 
   async function handleSearch() {
-    setIsLoading(true);
-    setResults([]);
-    setParsedQueries([]);
-    setLocalResults([]);
-    setListingsSearched(0);
-  
-    const evtSource = new EventSource("https://flipfinder.onrender.com/events");
-    evtSource.onmessage = function (event) {
-      if (event.data === "increment") {
-        setListingsSearched(prev => prev + 1);
-      }
-    };
-  
-    let allResults = [];
-    let parsedSet = [];
-    let allLocalResults = [];
-  
-    try {
-      for (let i = 0; i < searchInputs.length; i++) {
-        const query = searchInputs[i];
-  
-        // === eBay AI Search ===
-        const res = await fetch("https://flipfinder.onrender.com/ai_search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            search: query,
-            postalCode: userZip || "10001"
-          }),
-        });
-  
-        if (!res.ok) throw new Error("Search failed");
-  
-        const data = await res.json();
-        const parsed = data.parsed;
-        const results = data.results.map(r => ({ ...r, _parsed: parsed }));
-  
-        allResults = [...allResults, ...results];
-        parsedSet = [...parsedSet, parsed];
-        setResults([...allResults]);
-        setParsedQueries([...parsedSet]);
-  
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-    } catch (error) {
-      alert("Error performing one of the searches.");
-      console.error("❌ Search error:", error);
-    } finally {
-      evtSource.close();
-      setIsLoading(false);
+  setIsLoading(true);
+  setResults([]);
+  setParsedQueries([]);
+  setListingsSearched(0);
+
+  const evtSource = new EventSource("https://flipfinder.onrender.com/events");
+  evtSource.onmessage = function (event) {
+    if (event.data === "increment") {
+      setListingsSearched(prev => prev + 1);
     }
+  };
+
+  let allResults = [];
+  let parsedSet = [];
+
+  try {
+    for (let i = 0; i < searchInputs.length; i++) {
+      const query = searchInputs[i];
+      const res = await fetch("https://flipfinder.onrender.com/ai_search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          search: query,
+          postalCode: userZip || "10001"
+        })
+      });
+
+      if (!res.ok) throw new Error("Search failed");
+
+      const data = await res.json();
+      const parsed = data.parsed;
+      const results = data.results.map(r => ({ ...r, _parsed: parsed }));
+
+      allResults = [...allResults, ...results];
+      parsedSet = [...parsedSet, parsed];
+      setResults([...allResults]);
+      setParsedQueries([...parsedSet]);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  } catch (error) {
+    alert("Error performing one of the searches.");
+    console.error("Search error:", error);
+  } finally {
+    evtSource.close(); // ✅ Clean up
+    setIsLoading(false);
   }
-   
+}
+
+  
   
 
   if (!isAuthenticated) {
@@ -733,8 +771,8 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
               onChange: async (e) => {
                 const isChecked = e.target.checked;
               
-                // HARD LIMIT: Don't add more than 2
-                if (isChecked && autoSearches.length > 2) {
+                // HARD LIMIT: Don't add more than 3
+                if (isChecked && autoSearches.length > 3) {
                   return; // silently ignore
                 }
               
@@ -762,7 +800,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             marginBottom: "10px",
             textAlign: "center"
           }
-        }, "You’ve reached the maximum of 2 searches."),
+        }, "You’ve reached the maximum of 3 searches."),
     
         // Optional "Remove" button if there's more than 1 field
         searchInputs.length > 1 &&
