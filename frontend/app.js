@@ -33,10 +33,6 @@ function App() {
   const [email, setEmail] = useState("");
 
 
-  
-  
-
-
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
