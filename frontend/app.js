@@ -594,8 +594,8 @@ function App() {
     React.createElement("div", { className: "logo-wrapper" },
       React.createElement("img", {
         src: "assets/flip finder logo.png",
-        alt: "Resale Radar Logo",
-        height: "250"
+        alt: "Resale Logo",
+        height: "350"
       })
     ),
     React.createElement("div", {
