@@ -491,7 +491,7 @@ function App() {
         src: "assets/flip finder logo.png",
         alt: "Resale Radar Logo",
         style: {
-          width: "500px",
+          width: "800px",
           marginBottom: "20px",
           marginTop: "-275px",
           marginBottom: "20px",
