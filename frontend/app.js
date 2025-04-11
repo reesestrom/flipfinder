@@ -1029,13 +1029,22 @@ const MainApp = () => React.createElement(App, { authOnly: true });
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-  React.createElement(Router, null,
-    React.createElement(Routes, null,
-      React.createElement(Route, { path: "/login", element: React.createElement(LoginScreen) }),
-      React.createElement(Route, { path: "/", element: React.createElement(MainApp) }),
-      React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/" }) })
+  React.createElement(window.ReactRouterDOM.BrowserRouter, null,
+    React.createElement(window.ReactRouterDOM.Routes, null,
+      React.createElement(window.ReactRouterDOM.Route, {
+        path: "/login",
+        element: React.createElement(LoginScreen)
+      }),
+      React.createElement(window.ReactRouterDOM.Route, {
+        path: "/",
+        element: React.createElement(MainApp)
+      }),
+      React.createElement(window.ReactRouterDOM.Route, {
+        path: "*",
+        element: React.createElement(window.ReactRouterDOM.Navigate, { to: "/" })
+      })
     )
   )
 );
+})();
 
-})(); // end of waitForReactRouterDOM
