@@ -263,7 +263,7 @@ window.handleOpenDeleteModal = () => {
         setIsAuthenticated(true);
         localStorage.setItem("user", signupData.username);
         localStorage.setItem("userPreferences", JSON.stringify(userPreferences));
-        window.location.href = "/";
+        window.location.href = "/confirmation.html";
       } else {
         setSignupMessage(data.detail || "Signup failed");
       }
