@@ -1,7 +1,9 @@
 // Full Flip Finder app with login and post-login search functionality
 const { useState, useEffect } = React;
+const { BrowserRouter: Router, Routes, Route, Navigate } = ReactRouterDOM;
 
-function App() {
+
+function App({ authOnly = false }) {
   const [autoSearches, setAutoSearches] = useState([]);
   const [searchInputs, setSearchInputs] = useState([""]);
   const [results, setResults] = useState([]);
@@ -9,6 +11,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  if (!isAuthenticated && authOnly) {
+    return React.createElement(Navigate, { to: "/login" });
+  }  
   const [userZip, setUserZip] = useState("");
   const [userPreferences, setUserPreferences] = useState([]);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -31,10 +36,6 @@ function App() {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [email, setEmail] = useState("");
-
-
-
-  
   
 
 
@@ -1012,5 +1013,17 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
   );
 }
 
+const LoginScreen = () => React.createElement(App, { authOnly: false });
+const MainApp = () => React.createElement(App, { authOnly: true });
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(React.createElement(App));
+root.render(
+  React.createElement(Router, null,
+    React.createElement(Routes, null,
+      React.createElement(Route, { path: "/login", element: React.createElement(LoginScreen) }),
+      React.createElement(Route, { path: "/", element: React.createElement(MainApp) }),
+      React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/" }) })
+    )
+  )
+);
+
