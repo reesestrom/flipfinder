@@ -672,7 +672,7 @@ showDeleteModal && React.createElement(window.DeleteAccountModal, {
   }
 }),
 
-showEmailModal && React.createElement(window.ChangeEmailModal, {
+showEmailModal && window.showEmailModal && React.createElement(window.ChangeEmailModal, {
   currentEmail: email,
   onClose: () => setShowEmailModal(false),
   onSave: (newEmail) => {
@@ -682,13 +682,14 @@ showEmailModal && React.createElement(window.ChangeEmailModal, {
   }
 }),
 
-showPasswordModal && React.createElement(window.ChangePasswordModal, {
+showPasswordModal && windows.showPasswordModal && React.createElement(window.ChangePasswordModal, {
   userEmail: userEmail,
   onClose: () => setShowPasswordModal(false)
 }),
 
-showUsernameModal && React.createElement(window.ChangeUsernameModal, {
-
+showUsernameModal &&
+window.ChangeUsernameModal &&
+React.createElement(window.ChangeUsernameModal, {
   currentUsername: username,
   onClose: () => setShowUsernameModal(false),
   onSave: (newName) => {
@@ -697,6 +698,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
     setShowUsernameModal(false);
   }
 })
+
 
    
     ),
