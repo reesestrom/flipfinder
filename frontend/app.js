@@ -489,7 +489,7 @@ function App() {
     },
       React.createElement("img", {
         src: "assets/flip finder logo.png",
-        alt: "Flip Finder Logo",
+        alt: "Resale Radar Logo",
         style: {
           width: "500px",
           marginBottom: "20px",
@@ -498,7 +498,7 @@ function App() {
         }
       }),
       React.createElement("div", { className: "subtitle" },
-        "Discover deals, track profits, and flip goods"
+        "Discover deals, track profits, and resell goods"
       ),      
       React.createElement("div", { className: "subtitle" },
         "with your personal resale assistant!"
@@ -594,7 +594,7 @@ function App() {
     React.createElement("div", { className: "logo-wrapper" },
       React.createElement("img", {
         src: "assets/flip finder logo.png",
-        alt: "Flip Finder Logo",
+        alt: "Resale Radar Logo",
         height: "120"
       })
     ),
