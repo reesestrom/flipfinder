@@ -37,8 +37,8 @@ def request_password_reset(data: ResetRequest, db: Session = Depends(get_db)):
 
     reset_link = f"https://flipfinder.onrender.com/reset_password_form?token={token}"
 
-    msg = MIMEText(f"Click this link to reset your Flip Finder password:\n{reset_link}")
-    msg["Subject"] = "Flip Finder Password Reset"
+    msg = MIMEText(f"Click this link to reset your Resale Radar password:\n{reset_link}")
+    msg["Subject"] = "Resale Radar Password Reset"
     msg["From"] = EMAIL_ADDRESS
     msg["To"] = data.email
 

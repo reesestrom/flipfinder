@@ -28,7 +28,7 @@ print("✅ Email credentials loaded.")
 
 db = SessionLocal()
 now = datetime.datetime.utcnow()
-print("📬 Sending daily Flip Finder summary emails...")
+print("📬 Sending daily Resale Radar summary emails...")
 
 # Get all snapshots from today
 start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -89,7 +89,7 @@ for user_id, user_snaps in user_map.items():
     text_body = "\n\n".join(text_lines)
 
     html_body = """
-    <h2 style='font-family: Arial, sans-serif;'>Your Flip Finder Deals of the Day</h2>
+    <h2 style='font-family: Arial, sans-serif;'>Your Resale Radar Deals of the Day</h2>
     <ul style='padding: 0; list-style: none;'>
     """
     for item in top_5:
@@ -138,13 +138,13 @@ for user_id, user_snaps in user_map.items():
     html_body += """
     </ul>
     <p style='font-size: 12px; font-family: Arial, sans-serif;'>
-    To stop receiving these emails, disable Auto-search in your Flip Finder account.
+    To stop receiving these emails, disable Auto-search in your Resale Radar account.
     </p>
     """
 
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Your Flip Finder Deals of the Day"
+        msg["Subject"] = "Your Resale Radar Deals of the Day"
         msg["From"] = EMAIL_ADDRESS
         msg["To"] = user.email
 
