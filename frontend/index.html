@@ -4,26 +4,28 @@
   <meta charset="UTF-8" />
   <title>Flip Finder</title>
   <link rel="stylesheet" href="app.css" />
-
-  <!-- ✅ React + ReactDOM must load first -->
+  <!-- ✅ Reliable React links -->
   <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
-
-  <!-- ✅ Load React Router BEFORE app.js -->
-  <script src="https://unpkg.com/react-router-dom@6.23.0/umd/react-router-dom.production.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- ✅ All component scripts -->
+  <!-- 👇 Your main app logic -->
+
   <script src="AccountPopup.js"></script>
+
   <script src="EmailScheduleModal.js"></script>
+
   <script src="ChangeUsernameModal.js"></script>
+
   <script src="ChangeEmailModal.js"></script>
+
   <script src="ChangePasswordModal.js"></script>
+
   <script src="DeleteAccountModal.js"></script>
 
-  <!-- ✅ Main app (must come last) -->
   <script src="app.js"></script>
+
 </body>
 </html>
