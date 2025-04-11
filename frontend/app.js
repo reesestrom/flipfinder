@@ -1,8 +1,7 @@
 // Full Flip Finder app with login and post-login search functionality
 const { useState, useEffect } = React;
 
-function App(props) {
-  const authOnly = props?.authOnly ?? true;
+function App() {
   const [autoSearches, setAutoSearches] = useState([]);
   const [searchInputs, setSearchInputs] = useState([""]);
   const [results, setResults] = useState([]);
@@ -32,8 +31,6 @@ function App(props) {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [email, setEmail] = useState("");
-  const forceLoginOnly = window.FORCE_LOGIN_MODE === true;
-
 
 
 
@@ -195,23 +192,17 @@ function App(props) {
   }
   
   
-  window.handleOpenEmailModal = handleOpenEmailModal;
-window.handleOpenEmailSchedule = handleOpenEmailSchedule;
-window.handleOpenUsernameModal = handleOpenUsernameModal;
-window.setShowUsernameModal = setShowUsernameModal;
-
-if (typeof ChangeUsernameModal !== "undefined") {
+  window.handleOpenEmailModal = handleOpenEmailModal;  
+  window.handleOpenEmailSchedule = handleOpenEmailSchedule;
+  window.handleOpenUsernameModal = handleOpenUsernameModal; // ✅ THIS is what’s missing
+  window.setShowUsernameModal = setShowUsernameModal;
   window.ChangeUsernameModal = ChangeUsernameModal;
-}
-
-window.handleOpenPasswordModal = handleOpenPasswordModal;
-
-window.handleOpenDeleteModal = () => {
-  console.log("🗑️ Delete Account button clicked");
-  setShowAccountPopup(false);
-  setShowDeleteModal(true);
-};
-
+  window.handleOpenPasswordModal = handleOpenPasswordModal;
+  window.handleOpenDeleteModal = () => {
+    console.log("🗑️ Delete Account button clicked");
+    setShowAccountPopup(false);
+    setShowDeleteModal(true);
+  };
   
 
 
@@ -332,8 +323,8 @@ window.handleOpenDeleteModal = () => {
           .then(res => res.json())
           .then(items => setSavedItems(items))
           .catch(err => console.error("Failed to load saved items after login:", err));
-          window.location.href = "/";
-        }else {
+        window.location.reload();
+      }else {
         setLoginMessage(data.detail || "Login failed");
       }
     } catch (error) {
@@ -484,120 +475,120 @@ window.handleOpenDeleteModal = () => {
   
   
 
-if (forceLoginOnly || (!isAuthenticated && !authOnly)) {
-  return React.createElement("div", {
-    style: {
-      height: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#f7f7f7",
-      padding: "20px"
-    }
-  },
-    React.createElement("img", {
-      src: "assets/flip finder logo.png",
-      alt: "Flip Finder Logo",
+  if (!isAuthenticated) {
+    return React.createElement("div", {
       style: {
-        width: "500px",
-        marginBottom: "20px",
-        marginTop: "-275px",
-        marginBottom: "20px",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#f7f7f7",
+        padding: "20px"
       }
-    }),
-    React.createElement("div", { className: "subtitle" },
-      "Discover deals, track profits, and flip goods"
-    ),
-    React.createElement("div", { className: "subtitle" },
-      "with your personal resale assistant!"
-    ),
-    React.createElement("form", { onSubmit: handleLoginSubmit, style: { maxWidth: "300px", width: "100%" } },
-      ["email", "password"].map((field) =>
-        React.createElement("div", { key: field, style: { marginBottom: "10px", marginTop: "20px" } },
-          React.createElement("input", {
-            type: field === "password" ? "password" : "text",
-            placeholder: field.charAt(0).toUpperCase() + field.slice(1),
-            value: loginData[field],
-            required: true,
-            onChange: e => setLoginData({ ...loginData, [field]: e.target.value }),
-            style: {
-              width: "100%",
-              padding: "10px",
-              fontSize: "16px",
-              border: "1px solid #ccc",
-              borderRadius: "8px"
-            }
-          })
-        )
+    },
+      React.createElement("img", {
+        src: "assets/flip finder logo.png",
+        alt: "Flip Finder Logo",
+        style: {
+          width: "500px",
+          marginBottom: "20px",
+          marginTop: "-275px",
+          marginBottom: "20px",
+        }
+      }),
+      React.createElement("div", { className: "subtitle" },
+        "Discover deals, track profits, and flip goods"
+      ),      
+      React.createElement("div", { className: "subtitle" },
+        "with your personal resale assistant!"
+      ),      
+      React.createElement("form", { onSubmit: handleLoginSubmit, style: { maxWidth: "300px", width: "100%" } },
+        ["email", "password"].map((field) =>
+          React.createElement("div", { key: field, style: { marginBottom: "10px", marginTop: "20px" } },
+            React.createElement("input", {
+              type: field === "password" ? "password" : "text",
+              placeholder: field.charAt(0).toUpperCase() + field.slice(1),
+              value: loginData[field],
+              required: true,
+              onChange: e => setLoginData({ ...loginData, [field]: e.target.value }),
+              style: {
+                width: "100%",
+                padding: "10px",
+                fontSize: "16px",
+                border: "1px solid #ccc",
+                borderRadius: "8px"
+              }
+            })
+          )
+        ),
+        React.createElement("button", { type: "submit", className: "buttonPrimary", style: { width: "100%", padding: "10px" } }, "Log In"),
+        loginMessage && React.createElement("p", null, loginMessage)
       ),
-      React.createElement("button", { type: "submit", className: "buttonPrimary", style: { width: "100%", padding: "10px" } }, "Log In"),
-      loginMessage && React.createElement("p", null, loginMessage)
-    ),
-    React.createElement("button", {
-      type: "button",
-      className: "signup-toggle",
-      onClick: () => {
-        const email = prompt("Enter your email to reset password:");
-        if (!email) return;
-
-        fetch("https://flipfinder.onrender.com/request_password_reset", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: userEmail })
-        })
-          .then(res => res.json())
-          .then(data => alert(data.message || "If your email exists, you will receive a reset link."))
-          .catch(err => alert("Something went wrong. Please try again."));
-      }
-    }, "Forgot your password?"),
-
-    React.createElement("div", { style: { marginTop: "20px" } },
-      React.createElement("h4", null, "Don't have an account?"),
-      !showSignup && React.createElement("button", {
+      React.createElement("button", {
         type: "button",
         className: "signup-toggle",
-        onClick: () => setShowSignup(true)
-      }, "Sign Up"),
-      React.createElement("div", {
-        style: { display: "flex", justifyContent: "center", width: "100%" }
-      },
-        React.createElement("form", {
-          onSubmit: handleSignupSubmit,
-          className: `signup-slide ${showSignup ? "show" : ""}`,
-          style: { maxWidth: "350px", width: "100%" }
+        onClick: () => {
+          const email = prompt("Enter your email to reset password:");
+          if (!email) return;
+      
+          fetch("https://flipfinder.onrender.com/request_password_reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: userEmail })  // ✅ Must match pydantic model in backend
+          })
+          
+            .then(res => res.json())
+            .then(data => alert(data.message || "If your email exists, you will receive a reset link."))
+            .catch(err => alert("Something went wrong. Please try again."));
+        }
+      }, "Forgot your password?"),
+      
+      React.createElement("div", { style: { marginTop: "20px" } },
+        React.createElement("h4", null, "Don't have an account?"),
+        !showSignup && React.createElement("button", {
+          type: "button",
+          className: "signup-toggle",
+          onClick: () => setShowSignup(true)
+        }, "Sign Up"),
+        React.createElement("div", {
+          style: { display: "flex", justifyContent: "center", width: "100%" }
         },
-          ["username", "email", "password"].map((field) =>
-            React.createElement("div", { key: field, style: { marginBottom: "10px" } },
-              React.createElement("input", {
-                type: field === "password" ? "password" : "text",
-                placeholder: field.charAt(0).toUpperCase() + field.slice(1),
-                value: signupData[field],
-                required: true,
-                onChange: e => setSignupData({ ...signupData, [field]: e.target.value }),
-                style: {
-                  width: "100%",
-                  padding: "10px",
-                  fontSize: "16px",
-                  border: "1px solid #ccc",
-                  borderRadius: "8px"
-                }
-              })
-            )
-          ).concat([
-            React.createElement("button", {
-              type: "submit",
-              className: "buttonSecondary",
-              style: { width: "100%", padding: "10px" }
-            }, "Submit"),
-            signupMessage && React.createElement("p", null, signupMessage)
-          ])
-        )
-      )
-    )
-  );
-}
-
+          React.createElement("form", {
+            onSubmit: handleSignupSubmit,
+            className: `signup-slide ${showSignup ? "show" : ""}`,
+            style: { maxWidth: "350px", width: "100%" }
+          },
+            ["username", "email", "password"].map((field) =>
+              React.createElement("div", { key: field, style: { marginBottom: "10px" } },
+                React.createElement("input", {
+                  type: field === "password" ? "password" : "text",
+                  placeholder: field.charAt(0).toUpperCase() + field.slice(1),
+                  value: signupData[field],
+                  required: true,
+                  onChange: e => setSignupData({ ...signupData, [field]: e.target.value }),
+                  style: {
+                    width: "100%",
+                    padding: "10px",
+                    fontSize: "16px",
+                    border: "1px solid #ccc",
+                    borderRadius: "8px"
+                  }
+                })
+              )
+            ).concat([
+              React.createElement("button", {
+                type: "submit",
+                className: "buttonSecondary",
+                style: { width: "100%", padding: "10px" }
+              }, "Submit"),
+              signupMessage && React.createElement("p", null, signupMessage)
+            ])
+          )
+        )      
+      )      
+    );
+  }
 
   return React.createElement("div", { style: { maxWidth: "800px", margin: "auto", padding: "20px" } },
     React.createElement("div", { className: "logo-wrapper" },
@@ -633,13 +624,11 @@ if (forceLoginOnly || (!isAuthenticated && !authOnly)) {
     }),
     React.createElement("button", { className: "buttonSecondary", onClick: handleLogOut }, "Log Out"),
 
-    showAccountPopup && window.AccountPopup &&
-    React.createElement(window.AccountPopup, { onClose: () => setShowAccountPopup(false) }),
-  
+showAccountPopup && React.createElement(window.AccountPopup, { onClose: () => setShowAccountPopup(false) }),
 
-    showEmailSchedule && window.EmailScheduleModal &&
-    React.createElement(window.EmailScheduleModal, {
-    username,
+
+showEmailSchedule && React.createElement(window.EmailScheduleModal, {
+  username,
   selectedDays: emailDays,
   onClose: () => setShowEmailSchedule(false),
   onSave: (days) => {
@@ -655,8 +644,7 @@ if (forceLoginOnly || (!isAuthenticated && !authOnly)) {
 // Log the email before rendering the modal to ensure it's correct
 
 // Ensure the modal is rendered with the correct `email`
-showDeleteModal && window.DeleteAccountModal &&
-  React.createElement(window.DeleteAccountModal, {
+showDeleteModal && React.createElement(window.DeleteAccountModal, {
   userEmail: userEmail,  // Pass email as userEmail to the modal
   onClose: () => setShowDeleteModal(false),  // Close the modal when clicked
   onConfirm: async () => {
@@ -684,8 +672,7 @@ showDeleteModal && window.DeleteAccountModal &&
   }
 }),
 
-showEmailModal && window.ChangeEmailModal &&
-  React.createElement(window.ChangeEmailModal, {
+showEmailModal && React.createElement(window.ChangeEmailModal, {
   currentEmail: email,
   onClose: () => setShowEmailModal(false),
   onSave: (newEmail) => {
@@ -695,14 +682,12 @@ showEmailModal && window.ChangeEmailModal &&
   }
 }),
 
-showPasswordModal && window.ChangePasswordModal &&
-  React.createElement(window.ChangePasswordModal, {
+showPasswordModal && React.createElement(window.ChangePasswordModal, {
   userEmail: userEmail,
   onClose: () => setShowPasswordModal(false)
 }),
 
-showUsernameModal && window.ChangeUsernameModal &&
-  React.createElement(window.ChangeUsernameModal, {
+showUsernameModal && React.createElement(window.ChangeUsernameModal, {
 
   currentUsername: username,
   onClose: () => setShowUsernameModal(false),
@@ -1027,8 +1012,5 @@ showUsernameModal && window.ChangeUsernameModal &&
   );
 }
 
-if (!window.FORCE_LOGIN_MODE) {
-  ReactDOM.createRoot(document.getElementById("root")).render(
-    React.createElement(App)
-  );
-}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
