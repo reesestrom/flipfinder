@@ -700,8 +700,16 @@ Return ONLY valid JSON:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
+    async def run_raw_query():
+        try:
+            try_query(query, condition, include_terms, exclude_terms)
+            return all_results or []
+        except Exception as e:
+            print("❌ Raw query failed:", e)
+            return []
+
     parallel_results = loop.run_until_complete(asyncio.gather(
-        asyncio.to_thread(try_query, query, condition, include_terms, exclude_terms),
+        run_raw_query(),
         gpt_fallback_search(1, original_input, query, include_terms, exclude_terms, condition),
         gpt_fallback_search(2, original_input, query, include_terms, exclude_terms, condition)
     ))
