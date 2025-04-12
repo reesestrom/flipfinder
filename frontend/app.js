@@ -430,10 +430,21 @@ function App() {
 
   const evtSource = new EventSource("https://flipfinder.onrender.com/events");
   evtSource.onmessage = function (event) {
-    if (event.data === "increment") {
-      setListingsSearched(prev => prev + 1);
+    try {
+      const payload = JSON.parse(event.data);
+      if (payload.type === "increment") {
+        setListingsSearched(prev => prev + 1);
+      } else if (payload.type === "new_result") {
+        setResults(prev => {
+          const newList = [...prev, payload.data];
+          return newList.sort((a, b) => b.profit - a.profit);
+        });
+      }
+    } catch (err) {
+      console.warn("Malformed SSE message:", event.data);
     }
   };
+  
 
   let allResults = [];
   let parsedSet = [];

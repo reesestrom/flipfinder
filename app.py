@@ -720,7 +720,7 @@ Return ONLY valid JSON:
                 result = calculate_profit(item, condition)
                 if result is None:
                     continue
-                all_results.append({
+                result_obj = {
                     "title": item.get("title"),
                     "price": result[0],
                     "item_price": result[3],
@@ -733,7 +733,20 @@ Return ONLY valid JSON:
                     "url": item.get("itemWebUrl"),
                     "refined_query": result[5],
                     "adjusted_condition": result[6]
-                })
+                }
+                all_results.append(result_obj)
+                seen_titles.add(item["title"])
+
+                # ✅ Sort in-place by profit
+                all_results.sort(key=lambda x: x["profit"], reverse=True)
+
+                # ✅ Send live update to frontend
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+                except RuntimeError:
+                    asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+
                 seen_titles.add(item["title"])
 
         # ✅ Early exit if we already have enough high-ROI results
@@ -750,7 +763,7 @@ Return ONLY valid JSON:
                 result = calculate_profit(item, condition)
                 if result is None:
                     continue
-                all_results.append({
+                result_obj = {
                     "title": item.get("title"),
                     "price": result[0],
                     "item_price": result[3],
@@ -763,7 +776,20 @@ Return ONLY valid JSON:
                     "url": item.get("itemWebUrl"),
                     "refined_query": result[5],
                     "adjusted_condition": result[6]
-                })
+                }
+                all_results.append(result_obj)
+                seen_titles.add(item["title"])
+
+                # ✅ Sort in-place by profit
+                all_results.sort(key=lambda x: x["profit"], reverse=True)
+
+                # ✅ Send live update to frontend
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+                except RuntimeError:
+                    asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+
                 seen_titles.add(item["title"])
         iteration += 1
 
