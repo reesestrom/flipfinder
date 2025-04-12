@@ -694,7 +694,8 @@ Return ONLY valid JSON:
             return []
         seen_queries.add(query_key)
 
-        return run_ebay_search(query, cond, includes, excludes, postal_code)
+        results = run_ebay_search(query, cond, includes, excludes, postal_code)
+        return results if results else []
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
