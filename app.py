@@ -53,11 +53,12 @@ app.include_router(auto_search_bp)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://flipfinderwebsite.onrender.com",  # production frontend
-        "http://localhost:3000",                   # local React dev
-        "http://127.0.0.1:3000",                  # fallback local
+        "https://flipfinderwebsite.onrender.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://resale-radar.com",
         "https://www.resale-radar.com",
-        "null"                                     # file:// access during local dev
+        "null"
     ],
     allow_credentials=True,
     allow_methods=["*"],
