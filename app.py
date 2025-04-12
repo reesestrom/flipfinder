@@ -742,9 +742,14 @@ Return ONLY valid JSON:
 def ai_search(nq: NaturalQuery):
     log_event("Search", f"query={nq.search}, zip={nq.postalCode or 'N/A'}")
     try:
-        parsed = parse_search_criteria(nq.search)
-        print("🔍 AI INTERPRETATION:")
-        print(json.dumps(parsed, indent=2))
+        parsed = {
+            "query": nq.search,
+            "condition": "any",
+            "include_terms": [],
+            "exclude_terms": []
+        }
+        print("🔍 Using raw input for initial query")
+
 
         # ✅ Pass ZIP to eBay search
         results = search_ebay(parsed, nq.search, postal_code=nq.postalCode)
