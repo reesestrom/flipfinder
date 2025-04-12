@@ -439,8 +439,7 @@ function App() {
   let parsedSet = [];
 
   try {
-    for (let i = 0; i < searchInputs.length; i++) {
-      const query = searchInputs[i];
+    const queryPromises = searchInputs.map(async (query) => {
       const res = await fetch("https://flipfinder.onrender.com/ai_search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -449,20 +448,29 @@ function App() {
           postalCode: userZip || "10001"
         })
       });
-
+    
       if (!res.ok) throw new Error("Search failed");
-
+    
       const data = await res.json();
       const parsed = data.parsed;
       const results = data.results.map(r => ({ ...r, _parsed: parsed }));
-
-      allResults = [...allResults, ...results];
-      parsedSet = [...parsedSet, parsed];
-      setResults([...allResults]);
-      setParsedQueries([...parsedSet]);
-
-      await new Promise(resolve => setTimeout(resolve, 0));
+    
+      return { results, parsed };
+    });
+    
+    try {
+      const allQueryResults = await Promise.all(queryPromises);
+    
+      const combinedResults = allQueryResults.flatMap(r => r.results);
+      const combinedParsed = allQueryResults.map(r => r.parsed);
+    
+      setResults(combinedResults);
+      setParsedQueries(combinedParsed);
+    } catch (error) {
+      alert("Error performing one of the searches.");
+      console.error("Search error:", error);
     }
+    
   } catch (error) {
     alert("Error performing one of the searches.");
     console.error("Search error:", error);
@@ -918,7 +926,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             }, `$${item.profit.toFixed(2)}`)
           ]),          
         )
-      ) : React.createElement("p", null, "Results will be shown here."),
+      ) : React.createElement("p", null, "Results can take up to 2 min to load."),
       React.createElement("div", { className: "saved-box", style: { marginTop: "60px" } },
         React.createElement("h2", null, "⭐ Saved Listings"),
         savedItems.length > 0

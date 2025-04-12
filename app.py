@@ -568,8 +568,10 @@ def search_ebay(parsed, original_input, postal_code=None):
         if cache_key in refined_cache:
             refined_resale = refined_cache[cache_key]
         else:
-            refined_resale = refined_avg_price(refined_query, adjusted_condition)
-            refined_cache[cache_key] = refined_resale
+            if total_price < 20:
+                return None  # ⏳ skip very low-value items to save time
+        refined_resale = refined_avg_price(refined_query, adjusted_condition)
+        refined_cache[cache_key] = refined_resale
 
         profit = (refined_resale * 0.85) - total_price
         roi = round(profit / total_price, 2) if total_price > 0 else 0
@@ -631,7 +633,7 @@ def search_ebay(parsed, original_input, postal_code=None):
             if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
                 break
 
-    try_query(query, condition, include_terms, exclude_terms)
+    #moved below into parallel run
 
     if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
         return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
@@ -698,6 +700,7 @@ Return ONLY valid JSON:
     asyncio.set_event_loop(loop)
 
     parallel_results = loop.run_until_complete(asyncio.gather(
+        asyncio.to_thread(try_query, query, condition, include_terms, exclude_terms),
         gpt_fallback_search(1, original_input, query, include_terms, exclude_terms, condition),
         gpt_fallback_search(2, original_input, query, include_terms, exclude_terms, condition)
     ))
@@ -723,6 +726,10 @@ Return ONLY valid JSON:
                     "adjusted_condition": result[6]
                 })
                 seen_titles.add(item["title"])
+
+        # ✅ Early exit if we already have enough high-ROI results
+        if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
+            return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
 
     iteration = 3
     while (len(all_results) < 5 or not all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5])) and iteration < 5:
@@ -752,6 +759,7 @@ Return ONLY valid JSON:
         iteration += 1
 
     return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
+
 @app.post("/ai_search")
 def ai_search(nq: NaturalQuery):
     log_event("Search", f"query={nq.search}, zip={nq.postalCode or 'N/A'}")
