@@ -479,6 +479,8 @@ def fetch_item_details(item_id):
 
 def search_ebay(parsed, original_input, postal_code=None):
     import asyncio
+    import json
+    import re
 
     def run_ebay_search(query, condition, include_terms, exclude_terms, postal_code=None):
         url = "https://api.ebay.com/buy/browse/v1/item_summary/search"
@@ -494,7 +496,6 @@ def search_ebay(parsed, original_input, postal_code=None):
             filters.append("conditionIds:{1000}")
         filter_str = ",".join(filters) if filters else None
 
-        import re
         params = {
             "q": query,
             "limit": "50",
@@ -618,8 +619,7 @@ def search_ebay(parsed, original_input, postal_code=None):
     all_results = []
     seen_titles = set()
     seen_queries = set()
-
-    seen_queries.add((parsed["query"].lower().strip(), parsed["condition"].lower().strip()))
+    seen_queries.add((query.lower().strip(), condition.lower().strip()))
 
     def try_query(q, cond, includes, excludes):
         raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
@@ -636,8 +636,9 @@ def search_ebay(parsed, original_input, postal_code=None):
     if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
         return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
 
-    async def gpt_fallback_search(iteration_num, original_input, original_query, original_include, original_exclude, condition):
-        prompt = f""" You're helping refine a resale-related eBay search based on a user's original message.
+    async def gpt_fallback_search(iteration_num, original_input, original_query, original_include_terms, original_exclude_terms, condition):
+        prompt = f"""
+You're helping refine a resale-related eBay search based on a user's original message.
 
 User's full original search message:
 \"{original_input}\"
@@ -648,30 +649,50 @@ Original parsed intent:
 - Include terms: {original_include_terms}
 - Exclude terms: {original_exclude_terms}
 
-Previous fallback search attempt:
-- Query: \"{query}\"
-- Include terms: {include_terms}
-- Exclude terms: {exclude_terms}
-- Only {len(all_results)} results found.
-
 Please try a **new, independent** eBay-style search query:
 - Do not copy the previous fallback search query, instead search something that is different yet fundamentally related to the original seearch query
 - Additionally, do not make adjustments to included and excluded terms by removing, changing, or finding synonms for them
 - Reword the `query` to be simpler or more natural for eBay titles. The query must be only a few words long (2-3) (with an emphasis on brand names)
 - You may simplify or remove unnecessary words from the query and move them to include_terms.
 - Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
-- Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing "broken" to "not working")
-- Do NOT add unrelated words like "flipping", "resale", or adjectives like "mint", unless the user originally said so.
+- Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing \"broken\" to \"not working\")
+- Do NOT add unrelated words like \"flipping\", \"resale\", or adjectives like \"mint\", unless the user originally said so.
 
 Return ONLY valid JSON:
 {{
   "query": "short new search string",
   "condition": "{condition}",
-  "include_terms": {json.dumps(include_terms)},
-  "exclude_terms": {json.dumps(exclude_terms)}
+  "include_terms": {json.dumps(original_include_terms)},
+  "exclude_terms": {json.dumps(original_exclude_terms)}
 }}
 """
-        ...  # re-use same GPT logic with deduplication check
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You help refine search criteria for resale flipping."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```json"):
+            raw = raw.removeprefix("```json").strip()
+        if raw.endswith("```"):
+            raw = raw.removesuffix("```").strip()
+        raw = re.sub(r",(\s*[}\]])", r"\1", raw)
+        parsed_fallback = json.loads(raw)
+
+        query = parsed_fallback["query"]
+        cond = parsed_fallback["condition"]
+        includes = parsed_fallback.get("include_terms", [])
+        excludes = parsed_fallback.get("exclude_terms", [])
+
+        query_key = (query.lower().strip(), cond.lower().strip())
+        if query_key in seen_queries:
+            print(f"⚠️ Iteration {iteration_num}: Duplicate combo, skipping.")
+            return []
+        seen_queries.add(query_key)
+
+        return run_ebay_search(query, cond, includes, excludes, postal_code)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -687,7 +708,21 @@ Return ONLY valid JSON:
                 result = calculate_profit(item, condition)
                 if result is None:
                     continue
-                ...  # build result dict and append
+                all_results.append({
+                    "title": item.get("title"),
+                    "price": result[0],
+                    "item_price": result[3],
+                    "description": result[7],
+                    "shipping": result[4],
+                    "profit": result[1],
+                    "roi": result[2],
+                    "profit_color": "green",
+                    "thumbnail": item.get("image", {}).get("imageUrl"),
+                    "url": item.get("itemWebUrl"),
+                    "refined_query": result[5],
+                    "adjusted_condition": result[6]
+                })
+                seen_titles.add(item["title"])
 
     iteration = 3
     while (len(all_results) < 5 or not all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5])) and iteration < 5:
@@ -699,11 +734,24 @@ Return ONLY valid JSON:
                 result = calculate_profit(item, condition)
                 if result is None:
                     continue
-                ...  # build result dict and append
+                all_results.append({
+                    "title": item.get("title"),
+                    "price": result[0],
+                    "item_price": result[3],
+                    "description": result[7],
+                    "shipping": result[4],
+                    "profit": result[1],
+                    "roi": result[2],
+                    "profit_color": "green",
+                    "thumbnail": item.get("image", {}).get("imageUrl"),
+                    "url": item.get("itemWebUrl"),
+                    "refined_query": result[5],
+                    "adjusted_condition": result[6]
+                })
+                seen_titles.add(item["title"])
         iteration += 1
 
     return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
-
 @app.post("/ai_search")
 def ai_search(nq: NaturalQuery):
     log_event("Search", f"query={nq.search}, zip={nq.postalCode or 'N/A'}")
