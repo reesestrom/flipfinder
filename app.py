@@ -545,6 +545,8 @@ def search_ebay(parsed, original_input, postal_code=None):
 
         for _ in range(26):
             safe_enqueue_increment()
+        # ✅ Increment listing counter for each item processed
+        safe_enqueue_increment()
 
         price = float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
@@ -716,26 +718,40 @@ Return ONLY valid JSON:
 
     for group in parallel_results:
         for item in group:
-            if item["title"] not in seen_titles:
-                result = calculate_profit(item, condition)
-                if result is None:
-                    continue
-                result_obj = {
-                    "title": item.get("title"),
-                    "price": result[0],
-                    "item_price": result[3],
-                    "description": result[7],
-                    "shipping": result[4],
-                    "profit": result[1],
-                    "roi": result[2],
-                    "profit_color": "green",
-                    "thumbnail": item.get("image", {}).get("imageUrl"),
-                    "url": item.get("itemWebUrl"),
-                    "refined_query": result[5],
-                    "adjusted_condition": result[6]
-                }
-                all_results.append(result_obj)
-                seen_titles.add(item["title"])
+            result = calculate_profit(item, condition)
+        if result is None or result[1] <= 0 or result[2] < ROI_THRESHOLD:
+            continue
+        if item["title"] not in seen_titles:
+            result_obj = {
+                "title": item.get("title"),
+                "price": result[0],
+                "item_price": result[3],
+                "description": result[7],
+                "shipping": result[4],
+                "profit": result[1],
+                "roi": result[2],
+                "profit_color": "green",
+                "thumbnail": item.get("image", {}).get("imageUrl"),
+                "url": item.get("itemWebUrl"),
+                "refined_query": result[5],
+                "adjusted_condition": result[6]
+            }
+            all_results.append(result_obj)
+            seen_titles.add(item["title"])
+            all_results.sort(key=lambda x: x["profit"], reverse=True)
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(message_queue.put("increment"))
+                loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+            except RuntimeError:
+                asyncio.run(message_queue.put("increment"))
+                asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))  # ✅ Added after streaming valid result
+                all_results.sort(key=lambda x: x["profit"], reverse=True)
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+                except RuntimeError:
+                    asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
                 # ✅ Sort in-place by profit
                 all_results.sort(key=lambda x: x["profit"], reverse=True)
@@ -743,8 +759,10 @@ Return ONLY valid JSON:
                 # ✅ Send live update to frontend
                 try:
                     loop = asyncio.get_running_loop()
+                    loop.create_task(message_queue.put("increment"))
                     loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
                 except RuntimeError:
+                    asyncio.run(message_queue.put("increment"))
                     asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
                 seen_titles.add(item["title"])
@@ -761,7 +779,7 @@ Return ONLY valid JSON:
         for item in results:
             if item["title"] not in seen_titles:
                 result = calculate_profit(item, condition)
-                if result is None:
+                if result is None or result[1] <= 0 or result[2] < ROI_THRESHOLD:
                     continue
                 result_obj = {
                     "title": item.get("title"),
@@ -779,6 +797,12 @@ Return ONLY valid JSON:
                 }
                 all_results.append(result_obj)
                 seen_titles.add(item["title"])
+                all_results.sort(key=lambda x: x["profit"], reverse=True)
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+                except RuntimeError:
+                    asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
                 # ✅ Sort in-place by profit
                 all_results.sort(key=lambda x: x["profit"], reverse=True)
