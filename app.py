@@ -570,7 +570,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         else:
             if total_price < 20:
                 return None  # ⏳ skip very low-value items to save time
-        refined_resale = refined_avg_price(refined_query, adjusted_condition)
+            refined_resale = refined_avg_price(refined_query, adjusted_condition)
         refined_cache[cache_key] = refined_resale
 
         profit = (refined_resale * 0.85) - total_price
