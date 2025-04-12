@@ -560,13 +560,11 @@ def search_ebay(parsed, original_input, postal_code=None):
             return None  # ✅ skip item if shipping not usable
 
         total_price = price + shipping
-
-        # ✅ Only fetch full item details if the title suggests issues
         title = item.get("title", "").lower()
-        suspicious_terms = ["read", "see desc", "as is", "untested", "issue"]
-
         description = ""
-        if any(term in title for term in suspicious_terms):
+
+        # ✅ Only fetch full item details if price is above threshold
+        if price > 25:
             item_id = item.get("itemId", "")
             full_item = fetch_item_details(item_id)
             description = full_item.get("description", "")
