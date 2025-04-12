@@ -655,7 +655,6 @@ def search_ebay(parsed, original_input, postal_code=None):
         return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
 
     print("⏳ Waiting for initial eBay results...")
-    time.sleep(3)
     if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
         return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
 
