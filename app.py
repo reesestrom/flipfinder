@@ -719,9 +719,11 @@ Return ONLY valid JSON:
     for group in parallel_results:
         for item in group:
             result = calculate_profit(item, condition)
-        if result is None or result[1] <= 0 or result[2] < ROI_THRESHOLD:
-            continue
-        if item["title"] not in seen_titles:
+            if result is None or result[1] <= 0 or result[2] < ROI_THRESHOLD:
+                continue
+            if item["title"] in seen_titles:
+                continue
+
             result_obj = {
                 "title": item.get("title"),
                 "price": result[0],
@@ -738,6 +740,17 @@ Return ONLY valid JSON:
             }
             all_results.append(result_obj)
             seen_titles.add(item["title"])
+            all_results.sort(key=lambda x: x["profit"], reverse=True)
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(message_queue.put("increment"))
+                loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+            except RuntimeError:
+                asyncio.run(message_queue.put("increment"))
+                asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+
+        if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
+            return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
             all_results.sort(key=lambda x: x["profit"], reverse=True)
             try:
                 loop = asyncio.get_running_loop()
