@@ -579,8 +579,14 @@ def search_ebay(parsed, original_input, postal_code=None):
         return total_price, profit, roi, price, shipping, refined_query, adjusted_condition, description
 
     def filter_and_score(items, include_terms, exclude_terms):
-        filtered = []
         for item in items:
+            # ✅ Fire counter immediately when processing each listing
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(message_queue.put(json.dumps({"type": "increment"})))
+            except RuntimeError:
+                asyncio.run(message_queue.put(json.dumps({"type": "increment"})))
+
             title = item.get("title", "").lower()
 
             if any(term.lower() in title for term in exclude_terms):
@@ -617,10 +623,8 @@ def search_ebay(parsed, original_input, postal_code=None):
             try:
                 loop = asyncio.get_running_loop()
                 loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-                loop.create_task(message_queue.put(json.dumps({"type": "increment"})))
             except RuntimeError:
                 asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-                asyncio.run(message_queue.put(json.dumps({"type": "increment"})))
 
 
     query = parsed["query"]
