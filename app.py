@@ -889,6 +889,7 @@ def facebook_search(data: dict = Body(...)):
 
         print("🔍 Parsed Query:", parsed_query)
         print("📍 ZIP Code:", zip_code)
+        print(token)
         print("🔑 MRSCRAPER_TOKEN:", "Loaded ✅" if token else "❌ MISSING")
 
         if not token:
