@@ -882,66 +882,56 @@ async def facebook_webhook(payload: dict = Body(...)):
 def facebook_search(data: dict = Body(...)):
     print("🔁 /facebook_search triggered")
 
+    parsed_query = data.get("query")
+    zip_code = data.get("zip") or "10001"
+    token_raw = os.getenv("MRSCRAPER_TOKEN")
+    token = token_raw.strip() if token_raw else None
+
+    print("🔍 Parsed Query:", parsed_query)
+    print("📍 ZIP Code:", zip_code)
+    print("🔑 MRSCRAPER_TOKEN:", "Loaded ✅" if token else "❌ MISSING")
+
+    if not token:
+        print("❌ ERROR: Token is missing or blank from .env")
+        raise HTTPException(status_code=500, detail="MrScraper API token is missing or empty")
+
+    category_url = "https://www.facebook.com/marketplace/category/household-appliances/"
+    category_name = "Household Appliances"
+
+    payload = {
+        "name": "FlipFinder FB Run",
+        "urls": ["https://www.facebook.com/marketplace"],
+        "webhook_url": "https://flipfinder.onrender.com/facebook_webhook",
+        "zip_codes": zip_code,
+        "categories": [
+            {
+                "name": category_name,
+                "url": category_url
+            }
+        ]
+    }
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
-    print("🧪 Sending Headers:", headers)
-    
-    try:
-        parsed_query = data.get("query")
-        zip_code = data.get("zip") or "10001"
-        token = {MRSCRAPER_TOKEN}
 
-        print("🔍 Parsed Query:", parsed_query)
-        print("📍 ZIP Code:", zip_code)
-        print(token)
-        print("🔑 MRSCRAPER_TOKEN:", "Loaded ✅" if token else "❌ MISSING")
+    print("🧪 Headers:", headers)
+    print("📤 Payload:", json.dumps(payload, indent=2))
 
-        if not token:
-            raise HTTPException(status_code=500, detail="Missing MrScraper token from .env")
+    response = requests.post(
+        "https://app.mrscraper.com/api/scrapers/fb-marketplace/create-and-run",
+        json=payload,
+        headers=headers
+    )
 
-        category_url = "https://www.facebook.com/marketplace/category/household-appliances/"
-        category_name = "Household Appliances"
+    print("📬 MrScraper Response Status:", response.status_code)
+    print("🧾 MrScraper Response Body:", response.text)
 
-        payload = {
-            "name": "FlipFinder FB Run",
-            "urls": ["https://www.facebook.com/marketplace"],
-            "webhook_url": "https://flipfinder.onrender.com/facebook_webhook",
-            "zip_codes": zip_code,
-            "categories": [
-                {
-                    "name": category_name,
-                    "url": category_url
-                }
-            ]
-        }
+    if not response.ok:
+        raise HTTPException(status_code=500, detail=f"MrScraper request failed: {response.text}")
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-
-        print("📤 Sending MrScraper request...")
-        response = requests.post(
-            "https://app.mrscraper.com/api/scrapers/fb-marketplace/create-and-run",
-            json=payload,
-            headers=headers
-        )
-
-        print("📬 MrScraper Response Status:", response.status_code)
-        print("🧾 MrScraper Response Body:", response.text)
-
-        if not response.ok:
-            raise HTTPException(status_code=500, detail="MrScraper request failed")
-
-        return response.json()
-
-    except Exception as e:
-        import traceback
-        print("❌ EXCEPTION in /facebook_search:")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    return response.json()
 
 @app.post("/ai_search")
 def ai_search(nq: NaturalQuery):
