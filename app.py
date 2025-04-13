@@ -498,7 +498,7 @@ def search_ebay(parsed, original_input, postal_code=None):
 
         params = {
             "q": query,
-            "limit": "30",
+            "limit": "50",
         }
         if postal_code and re.match(r"^\d{5}$", postal_code):
             params["buyerPostalCode"] = postal_code
@@ -547,11 +547,6 @@ def search_ebay(parsed, original_input, postal_code=None):
             safe_enqueue_increment()
 
         price = item["price"] if isinstance(item["price"], float) else float(item.get("price", {}).get("value", 0))
-
-        # ✅ Skip items priced below $40
-        if price <= 40:
-            return None
-
         shipping = extract_shipping_cost(item)
         if shipping is None:
             return None
@@ -560,9 +555,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         title = item.get("title", "").lower()
         description = ""
 
-        # ✅ Only fetch full item details if suspicious and expensive
-        suspicious_terms = ["read", "see desc", "as is", "untested", "issue"]
-        if price > 100 and any(term in title for term in suspicious_terms):
+        if price > 25:
             item_id = item.get("itemId", "")
             full_item = fetch_item_details(item_id)
             description = full_item.get("description", "")
@@ -575,8 +568,10 @@ def search_ebay(parsed, original_input, postal_code=None):
         if cache_key in refined_cache:
             refined_resale = refined_cache[cache_key]
         else:
+            if total_price < 20:
+                return None  # ⏳ skip very low-value items to save time
             refined_resale = refined_avg_price(refined_query, adjusted_condition)
-            refined_cache[cache_key] = refined_resale
+        refined_cache[cache_key] = refined_resale
 
         profit = (refined_resale * 0.85) - total_price
         roi = round(profit / total_price, 2) if total_price > 0 else 0
@@ -631,8 +626,6 @@ def search_ebay(parsed, original_input, postal_code=None):
             except RuntimeError:
                 asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
-            return all_results
-
 
     query = parsed["query"]
     condition = parsed.get("condition", "any")
@@ -646,8 +639,13 @@ def search_ebay(parsed, original_input, postal_code=None):
 
     def try_query(q, cond, includes, excludes):
         raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
-        return filter_and_score(raw_items, includes, excludes)
-
+        results = filter_and_score(raw_items, includes, excludes)
+        for r in results:
+            if r["title"] not in seen_titles:
+                all_results.append(r)
+                seen_titles.add(r["title"])
+            if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
+                break
 
     #moved below into parallel run
 
@@ -718,11 +716,11 @@ Return ONLY valid JSON:
 
     async def run_raw_query():
         try:
-            return try_query(query, condition, include_terms, exclude_terms)
+            try_query(query, condition, include_terms, exclude_terms)
+            return all_results or []
         except Exception as e:
             print("❌ Raw query failed:", e)
             return []
-
 
     parallel_results = loop.run_until_complete(asyncio.gather(
         run_raw_query(),
