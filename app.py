@@ -476,6 +476,67 @@ def fetch_item_details(item_id):
         print(f"⚠️ Failed to fetch item details for {item_id}: {response.status_code}")
         return {}
 
+def calculate_profit(item, parsed_condition):
+        def safe_enqueue_increment():
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(message_queue.put(json.dumps({"type": "increment"})))
+            except RuntimeError:
+                asyncio.run(message_queue.put(json.dumps({"type": "increment"})))
+
+        for _ in range(26):
+            safe_enqueue_increment()
+
+        price = item["price"] if isinstance(item["price"], float) else float(item.get("price", {}).get("value", 0))
+
+        # ✅ Skip items priced below $40
+        if price <= 40:
+            return None
+
+        shipping = extract_shipping_cost(item)
+        if shipping is None:
+            return None
+
+        total_price = price + shipping
+        title = item.get("title", "").lower()
+        description = ""
+
+        refinement = refine_title_and_condition(title, description, parsed_condition)
+        refined_query = refinement["refined_query"]
+        adjusted_condition = refinement["adjusted_condition"]
+
+        cache_key = (refined_query, adjusted_condition)
+        if cache_key in refined_cache:
+            refined_resale = refined_cache[cache_key]
+        else:
+            refined_resale = refined_avg_price(refined_query, adjusted_condition)
+            refined_cache[cache_key] = refined_resale
+
+        profit = (refined_resale * 0.85) - total_price
+        roi = round(profit / total_price, 2) if total_price > 0 else 0
+
+        return total_price, profit, roi, price, shipping, refined_query, adjusted_condition, description
+
+def extract_shipping_cost(item):
+        shipping_options = item.get("shippingOptions", [])
+        if not shipping_options:
+            print(f"⚠️ No shippingOptions found for item: {item.get('title')}")
+            return None
+
+        for option in shipping_options:
+            shipping_type = option.get("shippingType", "").lower()
+            if "pickup" in shipping_type:
+                continue
+
+            cost_data = option.get("shippingCost", {})
+            if cost_data is not None and "value" in cost_data:
+                cost = float(cost_data["value"])
+                print(f"✅ Found shipping: ${cost:.2f} for {item.get('title')}")
+                return cost
+
+        print(f"❌ Only pickup found — skipping: {item.get('title')}")
+        return None
+
 
 def search_ebay(parsed, original_input, postal_code=None):
     import asyncio
@@ -515,74 +576,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         data = response.json()
         return data.get("itemSummaries", [])
 
-    def extract_shipping_cost(item):
-        shipping_options = item.get("shippingOptions", [])
-        if not shipping_options:
-            print(f"⚠️ No shippingOptions found for item: {item.get('title')}")
-            return None
-
-        for option in shipping_options:
-            shipping_type = option.get("shippingType", "").lower()
-            if "pickup" in shipping_type:
-                continue
-
-            cost_data = option.get("shippingCost", {})
-            if cost_data is not None and "value" in cost_data:
-                cost = float(cost_data["value"])
-                print(f"✅ Found shipping: ${cost:.2f} for {item.get('title')}")
-                return cost
-
-        print(f"❌ Only pickup found — skipping: {item.get('title')}")
-        return None
-
-    def calculate_profit(item, parsed_condition):
-        def safe_enqueue_increment():
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(message_queue.put(json.dumps({"type": "increment"})))
-            except RuntimeError:
-                asyncio.run(message_queue.put(json.dumps({"type": "increment"})))
-
-        for _ in range(26):
-            safe_enqueue_increment()
-
-        price = item["price"] if isinstance(item["price"], float) else float(item.get("price", {}).get("value", 0))
-
-        # ✅ Skip items priced below $40
-        if price <= 40:
-            return None
-
-        shipping = extract_shipping_cost(item)
-        if shipping is None:
-            return None
-
-        total_price = price + shipping
-        title = item.get("title", "").lower()
-        description = ""
-
-        # ✅ Only fetch full item details if suspicious and expensive
-        suspicious_terms = ["read", "see desc", "as is", "untested", "issue"]
-        if price > 100 and any(term in title for term in suspicious_terms):
-            item_id = item.get("itemId", "")
-            full_item = fetch_item_details(item_id)
-            description = full_item.get("description", "")
-
-        refinement = refine_title_and_condition(title, description, parsed_condition)
-        refined_query = refinement["refined_query"]
-        adjusted_condition = refinement["adjusted_condition"]
-
-        cache_key = (refined_query, adjusted_condition)
-        if cache_key in refined_cache:
-            refined_resale = refined_cache[cache_key]
-        else:
-            refined_resale = refined_avg_price(refined_query, adjusted_condition)
-            refined_cache[cache_key] = refined_resale
-
-        profit = (refined_resale * 0.85) - total_price
-        roi = round(profit / total_price, 2) if total_price > 0 else 0
-
-        return total_price, profit, roi, price, shipping, refined_query, adjusted_condition, description
-
+    
     def filter_and_score(items, include_terms, exclude_terms):
         for item in items:
             # ✅ Fire counter immediately when processing each listing
@@ -826,6 +820,101 @@ Return ONLY valid JSON:
         iteration += 1
 
     return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
+
+@app.post("/facebook_webhook")
+async def facebook_webhook(payload: dict = Body(...)):
+    results = payload.get("results", [])
+    
+    # Parse listings here, then call the same calculate_profit logic as eBay
+    profitable = []
+    for item in results:
+        title = item.get("title", "")
+        price = float(item.get("price", 0))
+        url = item.get("url")
+        thumbnail = item.get("image")
+
+        fake_item = {
+            "title": title,
+            "price": {"value": price},
+            "shippingOptions": [{"shippingCost": {"value": 0}, "shippingType": "standard"}],
+            "itemWebUrl": url,
+            "image": {"imageUrl": thumbnail}
+        }
+
+        parsed_condition = "used"  # assume this for now
+        result = calculate_profit(fake_item, parsed_condition)
+        if result:
+            total_price, profit, roi, item_price, shipping, refined_query, adjusted_condition, _ = result
+            profitable.append({
+                "title": title,
+                "price": total_price,
+                "item_price": item_price,
+                "shipping": shipping,
+                "profit": profit,
+                "roi": roi,
+                "thumbnail": thumbnail,
+                "url": url,
+                "refined_query": refined_query,
+                "adjusted_condition": adjusted_condition
+            })
+            await message_queue.put(json.dumps({
+                "type": "facebook_result",
+                "data": {
+                    "title": title,
+                    "price": total_price,
+                    "item_price": item_price,
+                    "shipping": shipping,
+                    "profit": profit,
+                    "roi": roi,
+                    "thumbnail": thumbnail,
+                    "url": url,
+                    "refined_query": refined_query,
+                    "adjusted_condition": adjusted_condition
+                }
+            }))
+
+
+    # You can optionally broadcast via SSE or store in DB
+    return {"received": len(profitable), "qualified": [p for p in profitable if p["roi"] > 0.1]}
+
+
+@app.post("/facebook_search")
+def facebook_search(data: dict = Body(...)):
+    parsed_query = data.get("query")  # This should be the AI-refined query (e.g., "kitchenaid ksm150 used")
+    zip_code = data.get("zip") or "10001"  # Fallback ZIP
+    token = os.getenv("MRSCRAPER_TOKEN")  # Store your token in .env
+
+    category_url = "https://www.facebook.com/marketplace/category/household-appliances/"
+    category_name = "Household Appliances"
+
+    payload = {
+        "name": "FlipFinder FB Run",
+        "urls": ["https://www.facebook.com/marketplace"],
+        "webhook_url": "https://your-server.com/facebook_webhook",  # Set this up next
+        "zip_codes": zip_code,
+        "categories": [
+            {
+                "name": category_name,
+                "url": category_url
+            }
+        ]
+    }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(
+        "https://app.mrscraper.com/api/scrapers/fb-marketplace/create-and-run",
+        json=payload,
+        headers=headers
+    )
+
+    if not response.ok:
+        raise HTTPException(status_code=500, detail="MrScraper request failed")
+
+    return response.json()
 
 @app.post("/ai_search")
 def ai_search(nq: NaturalQuery):
