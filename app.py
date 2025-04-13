@@ -548,7 +548,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         # ✅ Increment listing counter for each item processed
         safe_enqueue_increment()
 
-        price = float(item.get("price", {}).get("value", 0))
+        price = item["price"] if isinstance(item["price"], float) else float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
         if shipping is None:
             return None
