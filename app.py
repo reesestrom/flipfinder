@@ -626,6 +626,8 @@ def search_ebay(parsed, original_input, postal_code=None):
             except RuntimeError:
                 asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
+            return all_results
+
 
     query = parsed["query"]
     condition = parsed.get("condition", "any")
@@ -639,13 +641,8 @@ def search_ebay(parsed, original_input, postal_code=None):
 
     def try_query(q, cond, includes, excludes):
         raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
-        results = filter_and_score(raw_items, includes, excludes)
-        for r in results:
-            if r["title"] not in seen_titles:
-                all_results.append(r)
-                seen_titles.add(r["title"])
-            if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
-                break
+        return filter_and_score(raw_items, includes, excludes)
+
 
     #moved below into parallel run
 
@@ -716,11 +713,11 @@ Return ONLY valid JSON:
 
     async def run_raw_query():
         try:
-            try_query(query, condition, include_terms, exclude_terms)
-            return all_results or []
+            return try_query(query, condition, include_terms, exclude_terms)
         except Exception as e:
             print("❌ Raw query failed:", e)
             return []
+
 
     parallel_results = loop.run_until_complete(asyncio.gather(
         run_raw_query(),
