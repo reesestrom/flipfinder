@@ -458,35 +458,49 @@ function App() {
   let parsedSet = [];
 
   try {
-    const queryPromises = searchInputs.map(async (query) => {
-      const res = await fetch("https://flipfinder.onrender.com/ai_search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          search: query,
-          postalCode: userZip || "10001"
-        })
-      });
-      
-      if (!res.ok) throw new Error("Search failed");
-      
-      const data = await res.json();
-      
-      // 🔁 Trigger Facebook scrape using AI-parsed query
-      await fetch("https://flipfinder.onrender.com/facebook_search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: data.parsed.query,
-          zip: userZip || "10001"
-        })
-      });
-      
-      const parsed = data.parsed;
-      const results = data.results.map(r => ({ ...r, _parsed: parsed }));
-    
-      return { results, parsed };
+  const queryPromises = searchInputs.map(async (query) => {
+    const res = await fetch("https://flipfinder.onrender.com/ai_search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        search: query,
+        postalCode: userZip || "10001"
+      })
     });
+
+    if (!res.ok) throw new Error("Search failed");
+
+    const data = await res.json();
+
+    // 🔁 Trigger Facebook scrape using AI-parsed query
+    const fbPayload = {
+      query: data.parsed.query,
+      zip: userZip || "10001"
+    };
+    console.log("📦 Facebook request payload:", fbPayload);
+
+    fetch("https://flipfinder.onrender.com/facebook_search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fbPayload)
+    })
+    .then(res => {
+      if (!res.ok) throw new Error(`FB fetch failed with status ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      console.log("✅ Facebook scrape initiated:", data);
+    })
+    .catch(err => {
+      console.error("❌ Error starting Facebook scrape:", err);
+    });
+
+    const parsed = data.parsed;
+    const results = data.results.map(r => ({ ...r, _parsed: parsed }));
+
+    return { results, parsed };
+  });
+
     
     try {
       const allQueryResults = await Promise.all(queryPromises);
