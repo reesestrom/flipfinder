@@ -70,7 +70,7 @@ EBAY_CLIENT_ID = os.getenv("EBAY_CLIENT_ID", "your-ebay-client-id")
 EBAY_CLIENT_SECRET = os.getenv("EBAY_CLIENT_SECRET", "your-ebay-client-secret")
 EBAY_OAUTH_TOKEN = None
 EBAY_TOKEN_EXPIRY = 0
-
+MRSCRAPER_TOKEN = os.getenv("MRSCRAPER_TOKEN", "your-mrscraper-api-key")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-api-key")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -885,7 +885,7 @@ def facebook_search(data: dict = Body(...)):
     try:
         parsed_query = data.get("query")
         zip_code = data.get("zip") or "10001"
-        token = os.getenv("MRSCRAPER_TOKEN")
+        token = {MRSCRAPER_TOKEN}
 
         print("🔍 Parsed Query:", parsed_query)
         print("📍 ZIP Code:", zip_code)
