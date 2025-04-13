@@ -539,14 +539,12 @@ def search_ebay(parsed, original_input, postal_code=None):
         def safe_enqueue_increment():
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(message_queue.put("increment"))
+                loop.create_task(message_queue.put(json.dumps({"type": "increment"})))
             except RuntimeError:
-                asyncio.run(message_queue.put("increment"))
+                asyncio.run(message_queue.put(json.dumps({"type": "increment"})))
 
         for _ in range(26):
             safe_enqueue_increment()
-        # ✅ Increment listing counter for each item processed
-        safe_enqueue_increment()
 
         price = item["price"] if isinstance(item["price"], float) else float(item.get("price", {}).get("value", 0))
         shipping = extract_shipping_cost(item)
