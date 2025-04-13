@@ -498,7 +498,7 @@ def search_ebay(parsed, original_input, postal_code=None):
 
         params = {
             "q": query,
-            "limit": "50",
+            "limit": "30",
         }
         if postal_code and re.match(r"^\d{5}$", postal_code):
             params["buyerPostalCode"] = postal_code
@@ -547,6 +547,11 @@ def search_ebay(parsed, original_input, postal_code=None):
             safe_enqueue_increment()
 
         price = item["price"] if isinstance(item["price"], float) else float(item.get("price", {}).get("value", 0))
+
+        # ✅ Skip items priced below $40
+        if price <= 40:
+            return None
+
         shipping = extract_shipping_cost(item)
         if shipping is None:
             return None
@@ -555,7 +560,9 @@ def search_ebay(parsed, original_input, postal_code=None):
         title = item.get("title", "").lower()
         description = ""
 
-        if price > 25:
+        # ✅ Only fetch full item details if suspicious and expensive
+        suspicious_terms = ["read", "see desc", "as is", "untested", "issue"]
+        if price > 100 and any(term in title for term in suspicious_terms):
             item_id = item.get("itemId", "")
             full_item = fetch_item_details(item_id)
             description = full_item.get("description", "")
@@ -568,10 +575,8 @@ def search_ebay(parsed, original_input, postal_code=None):
         if cache_key in refined_cache:
             refined_resale = refined_cache[cache_key]
         else:
-            if total_price < 20:
-                return None  # ⏳ skip very low-value items to save time
             refined_resale = refined_avg_price(refined_query, adjusted_condition)
-        refined_cache[cache_key] = refined_resale
+            refined_cache[cache_key] = refined_resale
 
         profit = (refined_resale * 0.85) - total_price
         roi = round(profit / total_price, 2) if total_price > 0 else 0
@@ -626,6 +631,8 @@ def search_ebay(parsed, original_input, postal_code=None):
             except RuntimeError:
                 asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
+            return all_results
+
 
     query = parsed["query"]
     condition = parsed.get("condition", "any")
@@ -639,13 +646,8 @@ def search_ebay(parsed, original_input, postal_code=None):
 
     def try_query(q, cond, includes, excludes):
         raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
-        results = filter_and_score(raw_items, includes, excludes)
-        for r in results:
-            if r["title"] not in seen_titles:
-                all_results.append(r)
-                seen_titles.add(r["title"])
-            if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
-                break
+        return filter_and_score(raw_items, includes, excludes)
+
 
     #moved below into parallel run
 
@@ -716,11 +718,11 @@ Return ONLY valid JSON:
 
     async def run_raw_query():
         try:
-            try_query(query, condition, include_terms, exclude_terms)
-            return all_results or []
+            return try_query(query, condition, include_terms, exclude_terms)
         except Exception as e:
             print("❌ Raw query failed:", e)
             return []
+
 
     parallel_results = loop.run_until_complete(asyncio.gather(
         run_raw_query(),
@@ -729,72 +731,53 @@ Return ONLY valid JSON:
     ))
 
     for group in parallel_results:
-        for item in group:
-            result = calculate_profit(item, condition)
-            if result is None or result[1] <= 0 or result[2] < ROI_THRESHOLD:
+        if not group:
+            continue
+
+        async def calculate_all(items):
+            loop = asyncio.get_event_loop()
+            tasks = [loop.run_in_executor(None, calculate_profit, item, condition) for item in items]
+            return await asyncio.gather(*tasks)
+
+        results = loop.run_until_complete(calculate_all(group))
+
+        for i, result in enumerate(results):
+            if result is None:
                 continue
+
+            item = group[i]
             if item["title"] in seen_titles:
                 continue
 
+            total_price, profit_value, roi, item_price, shipping, refined_query, adjusted_condition, description = result
+
             result_obj = {
                 "title": item.get("title"),
-                "price": result[0],
-                "item_price": result[3],
-                "description": result[7],
-                "shipping": result[4],
-                "profit": result[1],
-                "roi": result[2],
+                "price": total_price,
+                "item_price": item_price,
+                "description": description,
+                "shipping": shipping,
+                "profit": profit_value,
+                "roi": roi,
                 "profit_color": "green",
                 "thumbnail": item.get("image", {}).get("imageUrl"),
                 "url": item.get("itemWebUrl"),
-                "refined_query": result[5],
-                "adjusted_condition": result[6]
+                "refined_query": refined_query,
+                "adjusted_condition": adjusted_condition
             }
+
             all_results.append(result_obj)
             seen_titles.add(item["title"])
             all_results.sort(key=lambda x: x["profit"], reverse=True)
+
             try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(message_queue.put("increment"))
                 loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
             except RuntimeError:
-                asyncio.run(message_queue.put("increment"))
                 asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
         if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
             return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
-            all_results.sort(key=lambda x: x["profit"], reverse=True)
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(message_queue.put("increment"))
-                loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-            except RuntimeError:
-                asyncio.run(message_queue.put("increment"))
-                asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))  # ✅ Added after streaming valid result
-                all_results.sort(key=lambda x: x["profit"], reverse=True)
-                try:
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-                except RuntimeError:
-                    asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
-                # ✅ Sort in-place by profit
-                all_results.sort(key=lambda x: x["profit"], reverse=True)
-
-                # ✅ Send live update to frontend
-                try:
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(message_queue.put("increment"))
-                    loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-                except RuntimeError:
-                    asyncio.run(message_queue.put("increment"))
-                    asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-
-                seen_titles.add(item["title"])
-
-        # ✅ Early exit if we already have enough high-ROI results
-        if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
-            return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
 
     iteration = 3
     while (len(all_results) < 5 or not all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5])) and iteration < 5:
