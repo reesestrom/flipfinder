@@ -31,8 +31,6 @@ function App() {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [email, setEmail] = useState("");
-  const [facebookResults, setFacebookResults] = useState([]);
-
 
 
 
@@ -432,75 +430,33 @@ function App() {
 
   const evtSource = new EventSource("https://flipfinder.onrender.com/events");
   evtSource.onmessage = function (event) {
-    try {
-      const payload = JSON.parse(event.data);
-      if (payload.type === "increment") {
-        setListingsSearched(prev => prev + 1);
-      } else if (payload.type === "new_result") {
-        setResults(prev => {
-          const newList = [...prev, payload.data];
-          return newList.sort((a, b) => b.profit - a.profit);
-        });
-      }
-      else if (payload.type === "facebook_result") {
-        setFacebookResults(prev => {
-          const newList = [...prev, payload.data];
-          return newList.sort((a, b) => b.profit - a.profit);
-        });
-      }      
-    } catch (err) {
-      console.warn("Malformed SSE message:", event.data);
+    if (event.data === "increment") {
+      setListingsSearched(prev => prev + 1);
     }
   };
-  
 
   let allResults = [];
   let parsedSet = [];
 
   try {
-  const queryPromises = searchInputs.map(async (query) => {
-    const res = await fetch("https://flipfinder.onrender.com/ai_search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        search: query,
-        postalCode: userZip || "10001"
-      })
+    const queryPromises = searchInputs.map(async (query) => {
+      const res = await fetch("https://flipfinder.onrender.com/ai_search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          search: query,
+          postalCode: userZip || "10001"
+        })
+      });
+    
+      if (!res.ok) throw new Error("Search failed");
+    
+      const data = await res.json();
+      const parsed = data.parsed;
+      const results = data.results.map(r => ({ ...r, _parsed: parsed }));
+    
+      return { results, parsed };
     });
-
-    if (!res.ok) throw new Error("Search failed");
-
-    const data = await res.json();
-
-    // 🔁 Trigger Facebook scrape using AI-parsed query
-    const fbPayload = {
-      query: data.parsed.query,
-      zip: userZip || "10001"
-    };
-    console.log("📦 Facebook request payload:", fbPayload);
-
-    fetch("https://flipfinder.onrender.com/facebook_search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(fbPayload)
-    })
-    .then(res => {
-      if (!res.ok) throw new Error(`FB fetch failed with status ${res.status}`);
-      return res.json();
-    })
-    .then(data => {
-      console.log("✅ Facebook scrape initiated:", data);
-    })
-    .catch(err => {
-      console.error("❌ Error starting Facebook scrape:", err);
-    });
-
-    const parsed = data.parsed;
-    const results = data.results.map(r => ({ ...r, _parsed: parsed }));
-
-    return { results, parsed };
-  });
-
     
     try {
       const allQueryResults = await Promise.all(queryPromises);
@@ -874,209 +830,103 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
       React.createElement("span", { style: { color: "#4CAF50", fontWeight: "bold" } }, listingsSearched)
     ),    
     React.createElement("div", { className: "result-box", style: { marginTop: "20px" } },
-
-      // 🌎 Facebook Marketplace Section
-      facebookResults.length > 0 &&
-        React.createElement("h2", null, "Local Listings"),
-      facebookResults.length > 0
-        ? facebookResults.map((item, i) =>
-            React.createElement("div", {
-              key: `fb-${i}`,
-              style: {
-                display: "flex",
-                alignItems: "center",
-                marginBottom: "20px",
-                justifyContent: "space-between"
-              }
+      React.createElement("h2", null, "Top Resale Opportunities"),
+      results.length > 0 ? results.map((item, i) =>
+        React.createElement("div", {
+          key: i,
+          style: {
+            display: "flex",
+            alignItems: "center",
+            marginBottom: "20px",
+            justifyContent: "space-between"
+          }
+        },
+          // ⭐ Star button
+          React.createElement("button", {
+            onClick: () => toggleSaveItem(item),
+            style: {
+              fontSize: "24px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: savedItems.some(i => i.url === item.url) ? "gold" : "#ccc",
+              marginRight: "10px"
+            }
+          }, "★"),
+          React.createElement("a", {
+            href: item.url,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            onClick: () => {
+              fetch("https://flipfinder.onrender.com/log_click", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  url: item.url,
+                  title: item.title,
+                  username: username || "Anonymous"
+                })
+              }).catch(err => console.error("Click log failed:", err));
             },
-              React.createElement("button", {
-                onClick: () => toggleSaveItem(item),
-                style: {
-                  fontSize: "24px",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: savedItems.some(i => i.url === item.url) ? "gold" : "#ccc",
-                  marginRight: "10px"
-                }
-              }, "★"),
-              React.createElement("a", {
-                href: item.url,
-                target: "_blank",
-                rel: "noopener noreferrer",
-                onClick: () => {
-                  fetch("https://flipfinder.onrender.com/log_click", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      url: item.url,
-                      title: item.title,
-                      username: username || "Anonymous"
-                    })
-                  }).catch(err => console.error("Click log failed:", err));
-                },
-                style: {
-                  display: "flex",
-                  alignItems: "center",
-                  textDecoration: "none",
-                  color: "inherit",
-                  gap: "12px",
-                  flexGrow: 1
-                }
-              },
-                item.thumbnail &&
-                React.createElement("img", {
-                  src: item.thumbnail,
-                  alt: item.title,
-                  style: {
-                    width: "100px",
-                    height: "auto",
-                    objectFit: "cover",
-                    borderRadius: "10px",
-                    boxShadow: "0 0 4px rgba(0,0,0,0.15)"
-                  }
-                }),
-                React.createElement("div", { className: "details" },
-                  React.createElement("div", null, item.title),
-                  React.createElement("div", { className: "price" },
-                    `$${item.price.toFixed(2)}`,
-                    item.shipping !== undefined &&
-                      ` (incl. $${item.shipping.toFixed(2)} shipping)`
-                  )
-                )
-              ),
-              React.createElement("div", {
-                style: {
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-end",
-                  marginLeft: "10px"
-                }
-              }, [
-                React.createElement("span", {
-                  key: "label",
-                  style: {
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    color: "#888",
-                    marginBottom: "4px"
-                  }
-                }, "Potential Profit"),
-                React.createElement("span", {
-                  key: "value",
-                  className: "profit",
-                  style: {
-                    color: item.profit >= 0 ? "#2ecc71" : "red",
-                    fontSize: "24px",
-                    fontWeight: "bold"
-                  }
-                }, `$${item.profit.toFixed(2)}`)
-              ])
-            )
-          )
-        : null,
-    
-      // 💻 eBay Listings Section
-      React.createElement("h2", { style: { marginTop: "30px" } }, "eBay Listings"),
-      results.length > 0
-        ? results.map((item, i) =>
-            React.createElement("div", {
-              key: `ebay-${i}`,
+            style: {
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+              color: "inherit",
+              gap: "12px",
+              flexGrow: 1
+            }
+          },          
+            item.thumbnail &&
+            React.createElement("img", {
+              src: item.thumbnail,
+              alt: item.title,
               style: {
-                display: "flex",
-                alignItems: "center",
-                marginBottom: "20px",
-                justifyContent: "space-between"
+                width: "100px",
+                height: "auto",
+                objectFit: "cover",
+                borderRadius: "10px",
+                boxShadow: "0 0 4px rgba(0,0,0,0.15)"
               }
-            },
-              React.createElement("button", {
-                onClick: () => toggleSaveItem(item),
-                style: {
-                  fontSize: "24px",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: savedItems.some(i => i.url === item.url) ? "gold" : "#ccc",
-                  marginRight: "10px"
-                }
-              }, "★"),
-              React.createElement("a", {
-                href: item.url,
-                target: "_blank",
-                rel: "noopener noreferrer",
-                onClick: () => {
-                  fetch("https://flipfinder.onrender.com/log_click", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      url: item.url,
-                      title: item.title,
-                      username: username || "Anonymous"
-                    })
-                  }).catch(err => console.error("Click log failed:", err));
-                },
-                style: {
-                  display: "flex",
-                  alignItems: "center",
-                  textDecoration: "none",
-                  color: "inherit",
-                  gap: "12px",
-                  flexGrow: 1
-                }
-              },
-                item.thumbnail &&
-                React.createElement("img", {
-                  src: item.thumbnail,
-                  alt: item.title,
-                  style: {
-                    width: "100px",
-                    height: "auto",
-                    objectFit: "cover",
-                    borderRadius: "10px",
-                    boxShadow: "0 0 4px rgba(0,0,0,0.15)"
-                  }
-                }),
-                React.createElement("div", { className: "details" },
-                  React.createElement("div", null, item.title),
-                  React.createElement("div", { className: "price" },
-                    `$${item.price.toFixed(2)}`,
-                    item.shipping !== undefined &&
-                      ` (incl. $${item.shipping.toFixed(2)} shipping)`
-                  )
-                )
-              ),
-              React.createElement("div", {
-                style: {
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-end",
-                  marginLeft: "10px"
-                }
-              }, [
-                React.createElement("span", {
-                  key: "label",
-                  style: {
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    color: "#888",
-                    marginBottom: "4px"
-                  }
-                }, "Potential Profit"),
-                React.createElement("span", {
-                  key: "value",
-                  className: "profit",
-                  style: {
-                    color: item.profit >= 0 ? "#2ecc71" : "red",
-                    fontSize: "24px",
-                    fontWeight: "bold"
-                  }
-                }, `$${item.profit.toFixed(2)}`)
-              ])
-            )
-          )
-        : React.createElement("p", null, "Results can take up to 2 min to load."),
-    
-      // ⭐ Saved Listings
+            }),
+            React.createElement("div", { className: "details" },
+              React.createElement("div", null, item.title),
+              React.createElement("div", { className: "price" },
+                `$${item.price.toFixed(2)}`,
+                item.shipping !== undefined &&
+                  ` (incl. $${item.shipping.toFixed(2)} shipping)`
+              )
+                          )
+          ),
+          React.createElement("div", {
+            style: {
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              marginLeft: "10px"
+            }
+          }, [
+            React.createElement("span", {
+              key: "label",
+              style: {
+                fontSize: "12px",
+                fontWeight: "bold",
+                color: "#888",
+                marginBottom: "4px"
+              }
+            }, "Potential Profit"),
+            React.createElement("span", {
+              key: "value",
+              className: "profit",
+              style: {
+                color: item.profit >= 0 ? "#2ecc71" : "red",
+                fontSize: "24px",
+                fontWeight: "bold"
+              }
+            }, `$${item.profit.toFixed(2)}`)
+          ]),          
+        )
+      ) : React.createElement("p", null, "Results can take up to 2 min to load."),
       React.createElement("div", { className: "saved-box", style: { marginTop: "60px" } },
         React.createElement("h2", null, "⭐ Saved Listings"),
         savedItems.length > 0
@@ -1122,7 +972,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
                       item.shipping !== undefined &&
                         ` (incl. $${item.shipping.toFixed(2)} shipping)`
                     )
-                  )
+                                      )
                 ),
                 React.createElement("div", {
                   style: {
@@ -1150,7 +1000,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
                       fontWeight: "bold"
                     }
                   }, `$${item.profit.toFixed(2)}`)
-                ]),
+                ]),                
                 React.createElement("button", {
                   onClick: () => toggleSaveItem(item),
                   style: {
@@ -1161,12 +1011,12 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
                     color: "gold",
                     marginLeft: "10px"
                   }
-                }, "★")
+                }, "★"),                
               )
             )
           : React.createElement("p", null, "You haven't saved any listings yet.")
       )
-    )    
+    )
   );
 }
 
