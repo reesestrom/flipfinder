@@ -596,7 +596,7 @@ def search_ebay(parsed, original_input, postal_code=None):
             if shipping is None or profit_value <= 0:
                 continue
 
-            filtered.append({
+            result_obj = {
                 "title": item.get("title"),
                 "price": total_price,
                 "item_price": item_price,
@@ -609,9 +609,19 @@ def search_ebay(parsed, original_input, postal_code=None):
                 "url": item.get("itemWebUrl"),
                 "refined_query": refined_query,
                 "adjusted_condition": adjusted_condition
-            })
+            }
+            all_results.append(result_obj)
+            seen_titles.add(item["title"])
+            all_results.sort(key=lambda x: x["profit"], reverse=True)
 
-        return filtered
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+                loop.create_task(message_queue.put(json.dumps({"type": "increment"})))
+            except RuntimeError:
+                asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
+                asyncio.run(message_queue.put(json.dumps({"type": "increment"})))
+
 
     query = parsed["query"]
     condition = parsed.get("condition", "any")
