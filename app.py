@@ -882,6 +882,12 @@ async def facebook_webhook(payload: dict = Body(...)):
 def facebook_search(data: dict = Body(...)):
     print("🔁 /facebook_search triggered")
 
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    print("🧪 Sending Headers:", headers)
+    
     try:
         parsed_query = data.get("query")
         zip_code = data.get("zip") or "10001"
