@@ -497,10 +497,13 @@ function App() {
           : null;
 
   
+          const kslPromiseFinal = isKslAllowed ? kslPromise : null;
+
           const [ebayRes, kslRes] = await Promise.allSettled([
             ebayPromise,
-            isKslAllowed ? kslPromise : Promise.resolve({ status: "skipped" })
+            kslPromiseFinal
           ]);
+
             
         // Handle eBay
         if (ebayRes.status === "fulfilled" && ebayRes.value.ok) {
@@ -513,7 +516,7 @@ function App() {
         }
   
         // Handle KSL
-        if (isKslAllowed && kslRes.status === "fulfilled" && kslRes.value.ok) {
+        if (isKslAllowed && kslRes && kslRes.status === "fulfilled" && kslRes.value && kslRes.value.ok) {
           const kslData = await kslRes.value.json();
           const kslResults = kslData.map(r => ({
             ...r,
@@ -521,16 +524,14 @@ function App() {
             _source: "ksl"
           }));
           setResults(prev => [...prev, ...kslResults]);
-        } else {
-          if (kslRes.status === "fulfilled" && kslRes.value && typeof kslRes.value.text === "function") {
-            const errorText = await kslRes.value.text();
-            console.warn("⚠️ KSL search failed with response:", errorText);
-          } else if (kslRes.status === "rejected") {
-            console.warn("❌ KSL fetch crashed:", kslRes.reason);
-          } else {
-            console.warn("❓ Unknown KSL result:", kslRes);
-          }          
-       }
+        } else if (isKslAllowed && kslRes && kslRes.status === "fulfilled" && kslRes.value && typeof kslRes.value.text === "function") {
+          const errorText = await kslRes.value.text();
+          console.warn("⚠️ KSL response failed:", errorText);
+        } else if (isKslAllowed && kslRes && kslRes.status === "rejected") {
+          console.warn("❌ KSL fetch crashed:", kslRes.reason);
+        } else if (isKslAllowed) {
+          console.warn("❓ Unknown KSL result:", kslRes);
+        }
       }
     } catch (error) {
       alert("Error performing one of the searches.");
