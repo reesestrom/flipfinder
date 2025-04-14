@@ -81,6 +81,12 @@ class ChangeEmailRequest(BaseModel):
     old_email: str
     new_email: str
 
+class NaturalQuery(BaseModel):
+    search: str
+    postalCode: str | None = None
+    city: str | None = None
+    state: str | None = None
+
 from fastapi import Body
 
 @app.post("/ksl_deals")
@@ -423,9 +429,6 @@ def get_ebay_token():
     EBAY_TOKEN_EXPIRY = time.time() + int(token_data["expires_in"])
     return EBAY_OAUTH_TOKEN
 
-class NaturalQuery(BaseModel):
-    search: str
-    postalCode: str | None = None  # ✅ Add this line
 
 def parse_search_criteria(natural_input):
     prompt = f"""
