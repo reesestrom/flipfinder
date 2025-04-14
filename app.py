@@ -90,6 +90,8 @@ class NaturalQuery(BaseModel):
 
 from fastapi import Body
 
+from urllib.parse import quote
+
 @app.post("/ksl_deals")
 async def ksl_deals(nq: NaturalQuery):  
     try:
@@ -97,27 +99,27 @@ async def ksl_deals(nq: NaturalQuery):
         city = nq.city
         state = nq.state
 
+        # ✅ Safely encode query parameters
+        safe_query = quote(query or "")
+        safe_city = quote(city or "")
+        safe_state = quote(state or "")
+
+        scraper_url = f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}"
         print("🔍 Sending KSL scraper request to:")
-        print(f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}")
-        
+        print(scraper_url)
+
         async with httpx.AsyncClient() as client:
+            response = await client.get(scraper_url)
 
-            safe_query = quote(query or "")
-            safe_city = quote(city or "")
-            safe_state = quote(state or "")
-            print(safe_query)
-            print(safe_city)
-            print(safe_state)
-            response = await client.get(
-                f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}"
-            )
-            print("📬 Scraper response status:", response.status_code)
-            print("📦 Raw response text:", response.text)
+        print("📬 Scraper response status:", response.status_code)
 
-
-
-        listings = response.json()
-    
+        try:
+            listings = response.json()
+            print("📦 Example listing:", listings[0] if listings else "No listings returned.")
+        except Exception as json_err:
+            print("❌ Failed to decode scraper JSON:", json_err)
+            print("🧾 Response text:", response.text)
+            raise HTTPException(status_code=502, detail="Invalid response from KSL scraper")
 
         async def process_listing(listing):
             title = listing.get("title", "")
@@ -147,15 +149,14 @@ async def ksl_deals(nq: NaturalQuery):
                 print("❌ Error processing KSL listing:", e)
                 return None
 
-        # Process top 10 KSL listings in parallel
         results = await asyncio.gather(*[process_listing(l) for l in listings[:10]])
         cleaned = [r for r in results if r]
         cleaned.sort(key=lambda x: x["profit"], reverse=True)
         return cleaned[:5]
 
     except Exception as e:
-        print("❌ Error in /ksl_deals:", e)
-        raise HTTPException(status_code=500, detail="Failed to process KSL listings")
+        print("❌ Error in /ksl_deals route:", e)
+        raise HTTPException(status_code=500, detail="KSL processing failed")
 
 
 @app.post("/request_password_reset")
