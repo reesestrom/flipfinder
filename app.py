@@ -757,6 +757,7 @@ Original parsed intent:
 You must rephrase the original product query using simpler or more natural phrasing for eBay search titles.
 
 - The goal is to make the search slightly simpler or more effective — not different.
+- The ONLY time you may add words that did not already exist is if the previous query and the original query are the same. in which case you may add one simple word for example "chair" -> "wood chair"
 - You may remove adjectives or redundant words but NEVER change the product category or model.
 - You MUST preserve brand names and key product types.
 - NEVER add new words, synonyms, or change the user's intent.
