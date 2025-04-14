@@ -893,18 +893,6 @@ React.createElement("div", {
         justifyContent: "space-between"
       }
     },
-      // ⭐ Star button (duplicated from eBay)
-      React.createElement("button", {
-        onClick: () => toggleSaveItem(item),
-        style: {
-          fontSize: "24px",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          color: savedItems.some(i => i.url === item.url) ? "gold" : "#ccc",
-          marginRight: "10px"
-        }
-      }, "★"),    
     
       React.createElement("a", {
         href: item.url,
