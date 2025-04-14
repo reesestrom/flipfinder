@@ -757,7 +757,8 @@ Original parsed intent:
 Please try a **new, independent** eBay-style search query:
 - Do not copy the previous fallback search query, instead search something that is different yet fundamentally related to the original seearch query
 - Additionally, do not make adjustments to included and excluded terms by removing, changing, or finding synonms for them
-- Reword the `query` to be simpler or more natural for eBay titles. The query must be only a few words long (2-3) (with an emphasis on brand names)
+- Reword the `query` to be simpler or more natural for eBay titles.
+- The query should NEVER EXCEED 2-3 words
 - You may simplify or remove unnecessary words from the query and move them to include_terms.
 - Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
 - Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing \"broken\" to \"not working\")
