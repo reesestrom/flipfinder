@@ -95,8 +95,6 @@ import time
 
 @app.post("/ksl_deals")
 async def ksl_deals(nq: NaturalQuery):
-    import inspect
-    print("⚙️  /ksl_deals is async:", inspect.iscoroutinefunction(ksl_deals))
     start_time = time.time()
     try:
         query = nq.search
@@ -938,11 +936,20 @@ def ai_search(nq: NaturalQuery):
         # ✅ Count ROI-qualified items (ROI >= 0.5)
         qualified_count = sum(1 for item in results if item.get("roi", 0) >= 0.5)
 
+        # ✅ Generate alt1 and alt2 fallbacks using GPT
+        alt1_result = asyncio.run(gpt_fallback_search(1, nq.search, parsed["query"], parsed["include_terms"], parsed["exclude_terms"], parsed["condition"]))
+        alt2_result = asyncio.run(gpt_fallback_search(2, nq.search, parsed["query"], parsed["include_terms"], parsed["exclude_terms"], parsed["condition"]))
+
         return {
-            "parsed": parsed,
+            "parsed": {
+                **parsed,
+                "alt1": alt1_result["query"],
+                "alt2": alt2_result["query"]
+            },
             "results": results,
             "qualified_count": qualified_count
         }
+
 
     except Exception as e:
         print("X full error traceback:")

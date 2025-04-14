@@ -469,10 +469,37 @@ function App() {
     }
   
     try {
-      const queryTasks = searchInputs.map(async (query, i) => {
-        const isKslAllowed = i > 0 && i <= 2;
+      const userQuery = searchInputs[0]; // original user input
   
+      // Step 1: Send user query to get parsed + AI alternatives
+      const aiRes = await fetch("https://flipfinder.onrender.com/ai_search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          search: userQuery,
+          postalCode: userZip || "10001"
+        })
+      });
+  
+      if (!aiRes.ok) throw new Error("AI search failed");
+  
+      const aiData = await aiRes.json();
+      console.log("🧠 Parsed AI response:", aiData.parsed);
+
+      const refinedQuery = aiData.parsed?.query || userQuery;
+      const alt1 = aiData.parsed?.alt1 || null;
+      const alt2 = aiData.parsed?.alt2 || null;
+  
+      const allQueries = [
+        { source: "user", query: refinedQuery },
+        ...(alt1 ? [{ source: "alt1", query: alt1 }] : []),
+        ...(alt2 ? [{ source: "alt2", query: alt2 }] : [])
+      ];
+  
+      // Step 2: For each query, run eBay (and KSL if AI-generated)
+      const queryTasks = allQueries.map(async ({ source, query }) => {
         try {
+          // 🔍 eBay call
           const ebayRes = await fetch("https://flipfinder.onrender.com/ai_search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -485,63 +512,66 @@ function App() {
           if (!ebayRes.ok) throw new Error("eBay request failed");
   
           const ebayData = await ebayRes.json();
-          const refinedQuery = ebayData.parsed?.query || query;
   
           const ebayResults = ebayData.results.map(r => ({
             ...r,
             _parsed: ebayData.parsed,
             _source: "ebay"
           }));
+  
           setResults(prev => [...prev, ...ebayResults]);
           setParsedQueries(prev => [...prev, ebayData.parsed]);
   
-          console.log(`✅ eBay finished for input ${i + 1}:`, refinedQuery);
+          console.log(`✅ eBay finished for ${source} query:`, query);
   
-          if (isKslAllowed) {
-            console.log(`🚀 KSL trigger allowed for input ${i + 1}, running with query:`, refinedQuery);
+          // 🧭 KSL runs only for alt1 and alt2
+          if (source === "alt1" || source === "alt2") {
+            console.log("🚀 KSL fetch sending for:", query);
             try {
               const kslRes = await fetch("https://flipfinder.onrender.com/ksl_deals", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  search: refinedQuery,
+                  search: query,
                   city: userCity,
                   state: userState
                 })
               });
-          
+  
               if (!kslRes.ok) {
                 const errText = await kslRes.text();
-                console.warn(`⚠️ KSL failed for query ${refinedQuery}:`, errText);
+                console.warn(`⚠️ KSL failed for query ${query}:`, errText);
                 return;
               }
-          
+  
               const kslData = await kslRes.json();
               const kslResults = kslData.map(r => ({
                 ...r,
-                _parsed: refinedQuery,
+                _parsed: query,
                 _source: "ksl"
               }));
+  
               setResults(prev => [...prev, ...kslResults]);
-              console.log(`✅ KSL done for query ${refinedQuery} — ${kslResults.length} results`);
+              console.log(`✅ KSL done for query ${query} — ${kslResults.length} results`);
             } catch (err) {
               console.error("❌ KSL fetch crashed:", err);
             }
-          }          
+          }
         } catch (err) {
-          console.error("❌ Error with query input:", query, err);
+          console.error(`❌ Error with ${source} query "${query}":`, err);
         }
       });
   
       await Promise.all(queryTasks);
     } catch (error) {
-      alert("Error performing one of the searches.");
+      alert("Error performing the search.");
       console.error("Search error:", error);
     } finally {
-      evtSource.close(); // ✅ Clean up
+      evtSource.close();
       setIsLoading(false);
     }
   }
+  
   
   
   
