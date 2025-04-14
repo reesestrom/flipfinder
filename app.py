@@ -103,6 +103,9 @@ async def ksl_deals(nq: NaturalQuery):
         safe_query = quote(query or "")
         safe_city = quote(city or "")
         safe_state = quote(state or "")
+        print(safe_query)
+        print(safe_city)
+        print(safe_state)
 
         scraper_url = f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}"
         print("🔍 Sending KSL scraper request to:")
@@ -110,11 +113,30 @@ async def ksl_deals(nq: NaturalQuery):
 
         async with httpx.AsyncClient() as client:
             response = await client.get(scraper_url)
-
+        
         print("📬 Scraper response status:", response.status_code)
 
         try:
             listings = response.json()
+            print("📦 Sample listing:", listings[0] if listings else "No listings returned.")
+        except Exception as json_err:
+            print("❌ Failed to decode JSON from scraper:", json_err)
+            print("🧾 Response text:", response.text)
+            raise HTTPException(status_code=502, detail="Bad response from KSL scraper")
+
+
+        print("📬 Scraper response status:", response.status_code)
+
+        try:
+            import json
+            try:
+                raw_text = await response.aread()
+                listings = json.loads(raw_text)
+                print("📦 Sample listing:", listings[0] if listings else "No listings returned.")
+            except Exception as json_err:
+                print("❌ Failed to decode JSON from scraper:", json_err)
+                print("🧾 Raw response body:", raw_text.decode("utf-8", errors="ignore"))
+                raise HTTPException(status_code=502, detail="KSL scraper returned bad JSON")
             print("📦 Example listing:", listings[0] if listings else "No listings returned.")
         except Exception as json_err:
             print("❌ Failed to decode scraper JSON:", json_err)
