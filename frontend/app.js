@@ -878,21 +878,34 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
       React.createElement("span", { style: { color: "#4CAF50", fontWeight: "bold" } }, listingsSearched)
     ),    
     results.some(r => r._source === "ksl") &&
-React.createElement("div", {
-  className: "result-box",
-  style: { marginBottom: "30px", background: "#fdfdfd" }
-},
-  React.createElement("h2", null, "Local KSL Listings"),
-  results.filter(r => r._source === "ksl").map((item, i) =>
     React.createElement("div", {
-      key: `ksl-${i}`,
-      style: {
-        display: "flex",
-        alignItems: "center",
-        marginBottom: "20px",
-        justifyContent: "space-between"
-      }
+      className: "result-box",
+      style: { marginBottom: "30px", background: "#fdfdfd" }
     },
+      React.createElement("h2", null, "Local KSL Listings"),
+      results.filter(r => r._source === "ksl").map((item, i) =>
+        React.createElement("div", {
+          key: `ksl-${i}`,
+          style: {
+            display: "flex",
+            alignItems: "center",
+            marginBottom: "20px",
+            justifyContent: "space-between"
+          }
+        },
+          // ⭐ Star Button — identical to eBay one
+          React.createElement("button", {
+            onClick: () => toggleSaveItem(item),
+            style: {
+              fontSize: "24px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: savedItems.some(i => i.url === item.url) ? "gold" : "#ccc",
+              marginRight: "10px"
+            }
+          }, "★"),
+        
     
       React.createElement("a", {
         href: item.url,
