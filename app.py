@@ -88,16 +88,19 @@ class NaturalQuery(BaseModel):
     city: str | None = None
     state: str | None = None
 
-from fastapi import Body
-
 from urllib.parse import quote
+import json
+import traceback
+import time
 
 @app.post("/ksl_deals")
 async def ksl_deals(nq: NaturalQuery):
+    start_time = time.time()
     try:
         query = nq.search
         city = nq.city
         state = nq.state
+        print(f"\n🟢 /ksl_deals started for: {query} [{city}, {state}]")
 
         safe_query = quote(query or "")
         safe_city = quote(city or "")
@@ -107,25 +110,25 @@ async def ksl_deals(nq: NaturalQuery):
         print("🔍 Sending KSL scraper request to:")
         print(scraper_url)
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(scraper_url)
-
-        print("📬 Scraper response status:", response.status_code)
-
-        try:
-            raw_text = await response.aread()
-            listings = json.loads(raw_text)
-            print("📦 Sample listing:", listings[0] if listings else "No listings returned.")
-        except Exception as json_err:
-            print("❌ Failed to decode JSON from scraper:", json_err)
-            print("🧾 Response body:", raw_text.decode("utf-8", errors="ignore"))
-            raise HTTPException(status_code=502, detail="Invalid JSON from KSL scraper")
-
-        async def process_listing(listing):
-            title = listing.get("title", "")
-            if not title or not listing.get("price"):
-                return None
+        async with httpx.AsyncClient(timeout=120) as client:
             try:
+                response = await client.get(scraper_url)
+                print("📬 Scraper response status:", response.status_code)
+                raw_bytes = await response.aread()
+                raw_text = raw_bytes.decode("utf-8", errors="ignore")
+                print("📦 Raw response (first 300 chars):", raw_text[:300])
+                listings = json.loads(raw_text)
+                print(f"✅ Parsed listing count: {len(listings)}")
+            except Exception as scraper_err:
+                print("❌ Scraper fetch/decode failed:")
+                traceback.print_exc()
+                raise HTTPException(status_code=502, detail="KSL scraper failed")
+
+        async def process_listing(listing, i):
+            try:
+                title = listing.get("title", "")
+                if not title or not listing.get("price"):
+                    return None
                 refinement = refine_title_and_condition(title, "", "used")
                 resale = refined_avg_price(refinement["refined_query"], refinement["adjusted_condition"])
                 price = float(listing["price"])
@@ -133,6 +136,7 @@ async def ksl_deals(nq: NaturalQuery):
                 roi = round(profit / price, 2)
                 if roi < ROI_THRESHOLD:
                     return None
+                print(f"🧮 #{i} OK: {title} | ROI: {roi:.2f} | Profit: ${profit:.2f}")
                 return {
                     "title": title,
                     "price": price,
@@ -147,16 +151,21 @@ async def ksl_deals(nq: NaturalQuery):
                     "_source": "ksl"
                 }
             except Exception as e:
-                print("❌ Error processing listing:", e)
+                print(f"❌ Error processing listing #{i}:")
+                traceback.print_exc()
                 return None
 
-        results = await asyncio.gather(*[process_listing(l) for l in listings[:10]])
+        results = await asyncio.gather(*[process_listing(l, i) for i, l in enumerate(listings[:10])])
         cleaned = [r for r in results if r]
         cleaned.sort(key=lambda x: x["profit"], reverse=True)
+
+        total_time = round(time.time() - start_time, 2)
+        print(f"✅ Finished /ksl_deals for: {query} | Returned: {len(cleaned)} | Time: {total_time}s")
         return cleaned[:5]
 
     except Exception as e:
-        print("❌ Error in /ksl_deals route:", e)
+        print("❌ General error in /ksl_deals:")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="KSL processing failed")
 
 
