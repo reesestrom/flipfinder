@@ -469,11 +469,10 @@ function App() {
     }
   
     try {
-      for (let i = 0; i < searchInputs.length; i++) {
-        const query = searchInputs[i];
-        const isKslAllowed = i > 0 && i <= 2;
+      for (const query of searchInputs) {
+        const parsedQuery = query;
   
-        // Start eBay request immediately
+        // Start both requests simultaneously
         const ebayPromise = fetch("https://flipfinder.onrender.com/ai_search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -483,53 +482,39 @@ function App() {
           })
         });
   
-        // Await eBay to get parsed query
-        const ebayRes = await ebayPromise;
+        const kslPromise = fetch("https://flipfinder.onrender.com/ksl_deals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            search: query,
+            city: userCity,
+            state: userState
+          })
+        });
   
-        let refinedQuery = query;
-        if (ebayRes.ok) {
-          const ebayData = await ebayRes.json();
-          refinedQuery = ebayData.parsed?.query || query;
+        const [ebayRes, kslRes] = await Promise.allSettled([ebayPromise, kslPromise]);
   
-          const ebayResults = ebayData.results.map(r => ({
-            ...r,
-            _parsed: ebayData.parsed,
-            _source: "ebay"
-          }));
+        // Handle eBay
+        if (ebayRes.status === "fulfilled" && ebayRes.value.ok) {
+          const ebayData = await ebayRes.value.json();
+          const ebayResults = ebayData.results.map(r => ({ ...r, _parsed: ebayData.parsed, _source: "ebay" }));
           setResults(prev => [...prev, ...ebayResults]);
           setParsedQueries(prev => [...prev, ebayData.parsed]);
         } else {
           console.warn("⚠️ eBay search failed for query:", query);
         }
   
-        // Now do KSL using refinedQuery
-        if (isKslAllowed) {
-          try {
-            const kslRes = await fetch("https://flipfinder.onrender.com/ksl_deals", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                search: refinedQuery,
-                city: userCity,
-                state: userState
-              })
-            });
-  
-            if (kslRes.ok) {
-              const kslData = await kslRes.json();
-              const kslResults = kslData.map(r => ({
-                ...r,
-                _parsed: refinedQuery,
-                _source: "ksl"
-              }));
-              setResults(prev => [...prev, ...kslResults]);
-            } else {
-              const errText = await kslRes.text();
-              console.warn("⚠️ KSL failed with:", errText);
-            }
-          } catch (kslErr) {
-            console.error("❌ KSL fetch crashed:", kslErr);
-          }
+        // Handle KSL
+        if (kslRes.status === "fulfilled" && kslRes.value.ok) {
+          const kslData = await kslRes.value.json();
+          const kslResults = kslData.map(r => ({
+            ...r,
+            _parsed: parsedQuery,
+            _source: "ksl"
+          }));
+          setResults(prev => [...prev, ...kslResults]);
+        } else {
+          console.warn("⚠️ KSL search failed for query:", query);
         }
       }
     } catch (error) {
@@ -540,7 +525,6 @@ function App() {
       setIsLoading(false);
     }
   }
-  
   
   
 
