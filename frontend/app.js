@@ -451,6 +451,7 @@ function App() {
     let parsedSet = [];
   
     // ✅ Stop if city/state not available for local KSL
+    console.log("📍 Location state:", { userZip, userCity, userState });
     if (!userCity || !userState) {
       alert("📍 Local KSL search requires location access. Please enable location services.");
       setIsLoading(false);
