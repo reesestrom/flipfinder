@@ -519,7 +519,7 @@ function App() {
             _source: "ebay"
           }));
   
-          setResults(prev => [...prev, ...ebayResults]);
+          setResults(prev => [...prev, ...ebayResults].sort((a, b) => b.profit - a.profit).slice(0, 5));
           setParsedQueries(prev => [...prev, ebayData.parsed]);
   
           console.log(`✅ eBay finished for ${source} query:`, query);

@@ -97,32 +97,39 @@ import time
 async def ksl_deals(nq: NaturalQuery):
     start_time = time.time()
     try:
-        query = nq.search
-        city = nq.city
-        state = nq.state
+        query = nq.search or ""
+        city = nq.city or ""
+        state = nq.state or ""
         print(f"\n🟢 /ksl_deals started for: {query} [{city}, {state}]")
 
-        safe_query = quote(query or "")
-        safe_city = quote(city or "")
-        safe_state = quote(state or "")
+        safe_query = quote(query)
+        safe_city = quote(city)
+        safe_state = quote(state)
 
         scraper_url = f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}"
         print("🔍 Sending KSL scraper request to:")
         print(scraper_url)
 
         async with httpx.AsyncClient(timeout=120) as client:
-            try:
-                response = await client.get(scraper_url)
-                print("📬 Scraper response status:", response.status_code)
-                raw_bytes = await response.aread()
-                raw_text = raw_bytes.decode("utf-8", errors="ignore")
-                print("📦 Raw response (first 300 chars):", raw_text[:300])
-                listings = json.loads(raw_text)
-                print(f"✅ Parsed listing count: {len(listings)}")
-            except Exception as scraper_err:
-                print("❌ Scraper fetch/decode failed:")
-                traceback.print_exc()
+            response = await client.get(scraper_url)
+            print("📬 Scraper response status:", response.status_code)
+
+            raw_bytes = await response.aread()
+            raw_text = raw_bytes.decode("utf-8", errors="ignore")
+            print("📦 Raw response (first 300 chars):", raw_text[:300])
+
+            if response.status_code != 200:
                 raise HTTPException(status_code=502, detail="KSL scraper failed")
+
+            try:
+                listings = json.loads(raw_text)
+                if not isinstance(listings, list):
+                    raise ValueError("KSL returned non-list JSON.")
+                print(f"✅ Parsed listing count: {len(listings)}")
+            except Exception:
+                print("❌ Scraper response not valid JSON:")
+                traceback.print_exc()
+                raise HTTPException(status_code=502, detail="KSL returned invalid response")
 
         async def process_listing(listing, i):
             try:
@@ -150,13 +157,13 @@ async def ksl_deals(nq: NaturalQuery):
                     "adjusted_condition": refinement["adjusted_condition"],
                     "_source": "ksl"
                 }
-            except Exception as e:
+            except Exception:
                 print(f"❌ Error processing listing #{i}:")
                 traceback.print_exc()
                 return None
 
-        # ✅ Increment frontend counter for each listing evaluated
-        for _ in range(10):  # or however many listings you're about to filter
+        # ✅ Trigger increment events for frontend counter
+        for _ in range(min(len(listings), 10)):
             await message_queue.put("increment")
 
         results = await asyncio.gather(*[process_listing(l, i) for i, l in enumerate(listings[:10])])
