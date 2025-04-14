@@ -522,12 +522,15 @@ function App() {
           }));
           setResults(prev => [...prev, ...kslResults]);
         } else {
-          if (kslRes.status === "fulfilled") {
-            console.warn("⚠️ KSL search failed:", await kslRes.value.text());
-          } else {
+          if (kslRes.status === "fulfilled" && kslRes.value && typeof kslRes.value.text === "function") {
+            const errorText = await kslRes.value.text();
+            console.warn("⚠️ KSL search failed with response:", errorText);
+          } else if (kslRes.status === "rejected") {
             console.warn("❌ KSL fetch crashed:", kslRes.reason);
-          }
-                  }
+          } else {
+            console.warn("❓ Unknown KSL result:", kslRes);
+          }          
+       }
       }
     } catch (error) {
       alert("Error performing one of the searches.");
