@@ -522,8 +522,12 @@ function App() {
           }));
           setResults(prev => [...prev, ...kslResults]);
         } else {
-          console.warn("⚠️ KSL search failed for query:", query);
-        }
+          if (kslRes.status === "fulfilled") {
+            console.warn("⚠️ KSL search failed:", await kslRes.value.text());
+          } else {
+            console.warn("❌ KSL fetch crashed:", kslRes.reason);
+          }
+                  }
       }
     } catch (error) {
       alert("Error performing one of the searches.");
