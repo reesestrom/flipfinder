@@ -893,7 +893,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             justifyContent: "space-between"
           }
         },
-          // ⭐ Star Button — identical to eBay one
+          // ⭐ Star button
           React.createElement("button", {
             onClick: () => toggleSaveItem(item),
             style: {
@@ -905,67 +905,65 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
               marginRight: "10px"
             }
           }, "★"),
-        
-    
-      React.createElement("a", {
-        href: item.url,
-        target: "_blank",
-        rel: "noopener noreferrer",
-        style: {
-          display: "flex",
-          alignItems: "center",
-          textDecoration: "none",
-          color: "inherit",
-          gap: "12px",
-          flexGrow: 1
-        }
-      },
-        item.thumbnail &&
-        React.createElement("img", {
-          src: item.thumbnail,
-          alt: item.title,
-          style: {
-            width: "100px",
-            height: "auto",
-            objectFit: "cover",
-            borderRadius: "10px",
-            boxShadow: "0 0 4px rgba(0,0,0,0.15)"
-          }
-        }),
-        React.createElement("div", { className: "details" },
-          React.createElement("div", null, item.title),
-          React.createElement("div", { className: "price" }, `$${item.price.toFixed(2)}`)
+          React.createElement("a", {
+            href: item.url,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            style: {
+              display: "flex",
+              alignItems: "center",
+              textDecoration: "none",
+              color: "inherit",
+              gap: "12px",
+              flexGrow: 1
+            }
+          },
+            item.thumbnail &&
+            React.createElement("img", {
+              src: item.thumbnail,
+              alt: item.title,
+              style: {
+                width: "100px",
+                height: "auto",
+                objectFit: "cover",
+                borderRadius: "10px",
+                boxShadow: "0 0 4px rgba(0,0,0,0.15)"
+              }
+            }),
+            React.createElement("div", { className: "details" },
+              React.createElement("div", null, item.title),
+              React.createElement("div", { className: "price" }, `$${item.price.toFixed(2)}`)
+            )
+          ),
+          React.createElement("div", {
+            style: {
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              marginLeft: "10px"
+            }
+          }, [
+            React.createElement("span", {
+              key: "label",
+              style: {
+                fontSize: "12px",
+                fontWeight: "bold",
+                color: "#888",
+                marginBottom: "4px"
+              }
+            }, "Potential Profit"),
+            React.createElement("span", {
+              key: "value",
+              className: "profit",
+              style: {
+                color: item.profit >= 0 ? "#2ecc71" : "red",
+                fontSize: "24px",
+                fontWeight: "bold"
+              }
+            }, `$${item.profit.toFixed(2)}`)
+          ])
         )
-      ),
-      React.createElement("div", {
-        style: {
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-end",
-          marginLeft: "10px"
-        }
-      }, [
-        React.createElement("span", {
-          key: "label",
-          style: {
-            fontSize: "12px",
-            fontWeight: "bold",
-            color: "#888",
-            marginBottom: "4px"
-          }
-        }, "Potential Profit"),
-        React.createElement("span", {
-          key: "value",
-          className: "profit",
-          style: {
-            color: item.profit >= 0 ? "#2ecc71" : "red",
-            fontSize: "24px",
-            fontWeight: "bold"
-          }
-        }, `$${item.profit.toFixed(2)}`)
-      ])
-    )
-  )
+      )      
 ),
     React.createElement("div", { className: "result-box", style: { marginTop: "20px" } },
       React.createElement("h2", null, "Top Ebay Listings"),
