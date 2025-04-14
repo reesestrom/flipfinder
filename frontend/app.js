@@ -903,7 +903,7 @@ React.createElement("div", {
         border: "none",
         cursor: "pointer"
       }
-    }, starredItems.includes(item.url) ? "★" : "☆"),      
+    }, savedItems.includes(item.url)    ? "★" : "☆"),      
     React.createElement("a", {
         href: item.url,
         target: "_blank",
