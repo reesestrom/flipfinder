@@ -94,15 +94,16 @@ async def ksl_deals(nq: NaturalQuery):
     import httpx
     from description_refiner import refine_title_and_condition
     from price_estimator import refined_avg_price
-    print("🔍 Sending KSL scraper request to:")
-    print(f"https://ksl-scraper.onrender.com/ksl?query={query}&city={city or ''}&state={state or ''}")
-
+    
+    
     try:
         query = nq.search
         city = nq.city
         state = nq.state
-        print(f"🟢 Scraping KSL for {query} near {city}, {state}")
 
+        print("🔍 Sending KSL scraper request to:")
+        print(f"https://ksl-scraper.onrender.com/ksl?query={query}&city={city or ''}&state={state or ''}")
+        
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"https://ksl-scraper.onrender.com/ksl?query={query}&city={city or ''}&state={state or ''}"
