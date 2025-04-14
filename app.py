@@ -566,64 +566,6 @@ def fetch_item_details(item_id):
         print(f"⚠️ Failed to fetch item details for {item_id}: {response.status_code}")
         return {}
 
-async def gpt_fallback_search(iteration_num, original_input, original_query, original_include_terms, original_exclude_terms, condition):
-        prompt = f"""
-You're helping refine a resale-related eBay search based on a user's original message.
-
-User's full original search message:
-\"{original_input}\"
-
-Original parsed intent:
-- Query: \"{original_query}\"
-- Condition: {condition}
-- Include terms: {original_include_terms}
-- Exclude terms: {original_exclude_terms}
-
-Please try a **new, independent** eBay-style search query:
-- Do not copy the previous fallback search query, instead search something that is different yet fundamentally related to the original seearch query
-- Additionally, do not make adjustments to included and excluded terms by removing, changing, or finding synonms for them
-- Reword the `query` to be simpler or more natural for eBay titles. The query must be only a few words long (2-3) (with an emphasis on brand names)
-- You may simplify or remove unnecessary words from the query and move them to include_terms.
-- Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
-- Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing \"broken\" to \"not working\")
-- Do NOT add unrelated words like \"flipping\", \"resale\", or adjectives like \"mint\", unless the user originally said so.
-
-Return ONLY valid JSON:
-{{
-  "query": "short new search string",
-  "condition": "{condition}",
-  "include_terms": {json.dumps(original_include_terms)},
-  "exclude_terms": {json.dumps(original_exclude_terms)}
-}}
-"""
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You help refine search criteria for resale flipping."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        raw = response.choices[0].message.content.strip()
-        if raw.startswith("```json"):
-            raw = raw.removeprefix("```json").strip()
-        if raw.endswith("```"):
-            raw = raw.removesuffix("```").strip()
-        raw = re.sub(r",(\s*[}\]])", r"\1", raw)
-        parsed_fallback = json.loads(raw)
-
-        query = parsed_fallback["query"]
-        cond = parsed_fallback["condition"]
-        includes = parsed_fallback.get("include_terms", [])
-        excludes = parsed_fallback.get("exclude_terms", [])
-
-        query_key = (query.lower().strip(), cond.lower().strip())
-        if query_key in seen_queries:
-            print(f"⚠️ Iteration {iteration_num}: Duplicate combo, skipping.")
-            return []
-        seen_queries.add(query_key)
-
-        results = run_ebay_search(query, cond, includes, excludes, postal_code)
-        return results if results else []
 
 def search_ebay(parsed, original_input, postal_code=None):
     import asyncio
@@ -696,7 +638,6 @@ def search_ebay(parsed, original_input, postal_code=None):
 
         price = item["price"] if isinstance(item["price"], float) else float(item.get("price", {}).get("value", 0))
 
-        # ✅ Skip items priced below $40
         if price <= 40:
             return None
 
@@ -708,7 +649,6 @@ def search_ebay(parsed, original_input, postal_code=None):
         title = item.get("title", "").lower()
         description = ""
 
-        # ✅ Only fetch full item details if suspicious and expensive
         suspicious_terms = ["read", "see desc", "as is", "untested", "issue"]
         if price > 100 and any(term in title for term in suspicious_terms):
             item_id = item.get("itemId", "")
@@ -733,7 +673,6 @@ def search_ebay(parsed, original_input, postal_code=None):
 
     def filter_and_score(items, include_terms, exclude_terms):
         for item in items:
-            # ✅ Fire counter immediately when processing each listing
             try:
                 loop = asyncio.get_running_loop()
                 loop.create_task(message_queue.put(json.dumps({"type": "increment"})))
@@ -781,7 +720,6 @@ def search_ebay(parsed, original_input, postal_code=None):
 
             return all_results
 
-
     query = parsed["query"]
     condition = parsed.get("condition", "any")
     include_terms = parsed.get("include_terms", [])
@@ -796,16 +734,64 @@ def search_ebay(parsed, original_input, postal_code=None):
         raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
         return filter_and_score(raw_items, includes, excludes)
 
+    async def gpt_fallback_search(iteration_num, original_input, original_query, original_include_terms, original_exclude_terms, condition):
+        prompt = f"""
+You're helping refine a resale-related eBay search based on a user's original message.
 
-    #moved below into parallel run
+User's full original search message:
+\"{original_input}\"
 
-    if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
-        return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
+Original parsed intent:
+- Query: \"{original_query}\"
+- Condition: {condition}
+- Include terms: {original_include_terms}
+- Exclude terms: {original_exclude_terms}
 
+Please try a **new, independent** eBay-style search query:
+- Do not copy the previous fallback search query, instead search something that is different yet fundamentally related to the original seearch query
+- Additionally, do not make adjustments to included and excluded terms by removing, changing, or finding synonms for them
+- Reword the `query` to be simpler or more natural for eBay titles. The query must be only a few words long (2-3) (with an emphasis on brand names)
+- You may simplify or remove unnecessary words from the query and move them to include_terms.
+- Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
+- Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing \"broken\" to \"not working\")
+- Do NOT add unrelated words like \"flipping\", \"resale\", or adjectives like \"mint\", unless the user originally said so.
 
+Return ONLY valid JSON:
+{{
+  "query": "short new search string",
+  "condition": "{condition}",
+  "include_terms": {json.dumps(original_include_terms)},
+  "exclude_terms": {json.dumps(original_exclude_terms)}
+}}
+"""
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You help refine search criteria for resale flipping."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```json"):
+            raw = raw.removeprefix("```json").strip()
+        if raw.endswith("```"):
+            raw = raw.removesuffix("```").strip()
+        raw = re.sub(r",(\s*[}\]])", r"\1", raw)
+        parsed_fallback = json.loads(raw)
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+        query = parsed_fallback["query"]
+        cond = parsed_fallback["condition"]
+        includes = parsed_fallback.get("include_terms", [])
+        excludes = parsed_fallback.get("exclude_terms", [])
+
+        query_key = (query.lower().strip(), cond.lower().strip())
+        if query_key in seen_queries:
+            print(f"⚠️ Iteration {iteration_num}: Duplicate combo, skipping.")
+            return []
+        seen_queries.add(query_key)
+
+        results = run_ebay_search(query, cond, includes, excludes, postal_code)
+        return results if results else []
 
     async def run_raw_query():
         try:
@@ -814,6 +800,8 @@ def search_ebay(parsed, original_input, postal_code=None):
             print("❌ Raw query failed:", e)
             return []
 
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     parallel_results = loop.run_until_complete(asyncio.gather(
         run_raw_query(),
@@ -821,7 +809,10 @@ def search_ebay(parsed, original_input, postal_code=None):
         gpt_fallback_search(2, original_input, query, include_terms, exclude_terms, condition)
     ))
 
-    for group in parallel_results:
+    alt1_query = ""
+    alt2_query = ""
+
+    for idx, group in enumerate(parallel_results):
         if not group:
             continue
 
@@ -866,57 +857,23 @@ def search_ebay(parsed, original_input, postal_code=None):
             except RuntimeError:
                 asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
 
+        if idx == 1 and group:
+            alt1_query = group[0].get("title", "")
+        elif idx == 2 and group:
+            alt2_query = group[0].get("title", "")
+
         if len(all_results) >= 5 and all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]):
-            return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
+            return {
+                "results": sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5],
+                "alt1": alt1_query,
+                "alt2": alt2_query
+            }
 
-
-    iteration = 3
-    while (len(all_results) < 5 or not all(item["roi"] >= ROI_THRESHOLD for item in sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5])) and iteration < 5:
-        results = loop.run_until_complete(
-            gpt_fallback_search(iteration, original_input, query, include_terms, exclude_terms, condition)
-        )
-        for item in results:
-            if item["title"] not in seen_titles:
-                result = calculate_profit(item, condition)
-                if result is None or result[1] <= 0 or result[2] < ROI_THRESHOLD:
-                    continue
-                result_obj = {
-                    "title": item.get("title"),
-                    "price": result[0],
-                    "item_price": result[3],
-                    "description": result[7],
-                    "shipping": result[4],
-                    "profit": result[1],
-                    "roi": result[2],
-                    "profit_color": "green",
-                    "thumbnail": item.get("image", {}).get("imageUrl"),
-                    "url": item.get("itemWebUrl"),
-                    "refined_query": result[5],
-                    "adjusted_condition": result[6]
-                }
-                all_results.append(result_obj)
-                seen_titles.add(item["title"])
-                all_results.sort(key=lambda x: x["profit"], reverse=True)
-                try:
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-                except RuntimeError:
-                    asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-
-                # ✅ Sort in-place by profit
-                all_results.sort(key=lambda x: x["profit"], reverse=True)
-
-                # ✅ Send live update to frontend
-                try:
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-                except RuntimeError:
-                    asyncio.run(message_queue.put(json.dumps({"type": "new_result", "data": result_obj})))
-
-                seen_titles.add(item["title"])
-        iteration += 1
-
-    return sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5]
+    return {
+        "results": sorted(all_results, key=lambda x: x["profit"], reverse=True)[:5],
+        "alt1": alt1_query,
+        "alt2": alt2_query
+    }
 
 @app.post("/ai_search")
 def ai_search(nq: NaturalQuery):
@@ -932,23 +889,16 @@ def ai_search(nq: NaturalQuery):
 
 
         # ✅ Pass ZIP to eBay search
-        results = search_ebay(parsed, nq.search, postal_code=nq.postalCode)
-
-        # ✅ Count ROI-qualified items (ROI >= 0.5)
-        qualified_count = sum(1 for item in results if item.get("roi", 0) >= 0.5)
-
-        # ✅ Generate alt1 and alt2 fallbacks using GPT
-        alt1_result = asyncio.run(gpt_fallback_search(1, nq.search, parsed["query"], parsed["include_terms"], parsed["exclude_terms"], parsed["condition"]))
-        alt2_result = asyncio.run(gpt_fallback_search(2, nq.search, parsed["query"], parsed["include_terms"], parsed["exclude_terms"], parsed["condition"]))
+        results = search_ebay(parsed, nq.search, nq.postalCode)
 
         return {
             "parsed": {
                 **parsed,
-                "alt1": alt1_result["query"],
-                "alt2": alt2_result["query"]
+                "alt1": results.get("alt1"),
+                "alt2": results.get("alt2")
             },
-            "results": results,
-            "qualified_count": qualified_count
+            "results": results["results"],
+            "qualified_count": len(results["results"])
         }
 
 
