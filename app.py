@@ -106,7 +106,7 @@ async def ksl_deals(nq: NaturalQuery):
         safe_city = quote(city)
         safe_state = quote(state)
 
-        scraper_url = f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}"
+        scraper_url = f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&state={safe_state}"
         print("🔍 Sending KSL scraper request to:")
         print(scraper_url)
 
@@ -754,23 +754,16 @@ Original parsed intent:
 - Include terms: {original_include_terms}
 - Exclude terms: {original_exclude_terms}
 
-Please rewrite the search query to create a **slightly different but valid simplified version** of the original product query. This new version must:
-
-- Be written in the natural style of eBay product titles
-- Focus **only on the core product name**
-- Be **no longer than 2–3 words**
-- Remove unnecessary adjectives or descriptors (e.g., “used”, “damaged”, “refurbished”) from the query, and use those to update the condition of the item.
-- Retain brand names
-- **Be different from previous attempts**, while still being valid for the same product
-- DO NOT add unrelated words
-- DO NOT invent product variations or change the category
-
-The goal is to find **another natural phrasing** for the same product type. This should improve the chance of matching existing listings.
-
-Examples:
-- “used kitchenaid mixer” → “kitchenaid mixer”
-- “broken dyson vacuum” → “dyson vacuum”
-- “dell xps 13 ultrabook” → “dell xps 13”
+Please try a **new, independent** eBay-style search query:
+- Do not copy the previous search query, instead search something that is different yet fundamentally related to the original seearch query
+- Additionally, do not make adjustments to included and excluded terms by removing, changing, or finding synonms for them
+- Reword the `query` to be simpler or more natural for eBay titles.
+- The new query should **NEVER EXCEED 3-4 words**
+- You may simplify or remove unnecessary words from the query and move them to include_terms.
+- Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
+- Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing \"broken\" to \"not working\")
+- NEVER add unrelated words unless the user originally said so.
+    -for example, if a user searched used kitchenaid mixer, your refined query can be kitcheniad mixer, or used kitchanid mixer, or kitchenaid.
 
 Return ONLY valid JSON:
 {{
