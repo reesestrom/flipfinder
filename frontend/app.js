@@ -471,10 +471,9 @@ function App() {
     try {
       for (let i = 0; i < searchInputs.length; i++) {
         const query = searchInputs[i];
-        const isKslAllowed = i > 0 && i <= 2;      
-        const parsedQuery = query;
+        const isKslAllowed = i > 0 && i <= 2;
   
-        // Start both requests simultaneously
+        // Start eBay request immediately
         const ebayPromise = fetch("https://flipfinder.onrender.com/ai_search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -484,53 +483,53 @@ function App() {
           })
         });
   
-        const kslPromise = isKslAllowed
-          ? fetch("https://flipfinder.onrender.com/ksl_deals", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                search: query,
-                city: userCity,
-                state: userState
-              })
-            })
-          : null;
-
+        // Await eBay to get parsed query
+        const ebayRes = await ebayPromise;
   
-          const kslPromiseFinal = isKslAllowed ? kslPromise : null;
-
-          const [ebayRes, kslRes] = await Promise.allSettled([
-            ebayPromise,
-            kslPromiseFinal
-          ]);
-
-            
-        // Handle eBay
-        if (ebayRes.status === "fulfilled" && ebayRes.value.ok) {
-          const ebayData = await ebayRes.value.json();
-          const ebayResults = ebayData.results.map(r => ({ ...r, _parsed: ebayData.parsed, _source: "ebay" }));
+        let refinedQuery = query;
+        if (ebayRes.ok) {
+          const ebayData = await ebayRes.json();
+          refinedQuery = ebayData.parsed?.query || query;
+  
+          const ebayResults = ebayData.results.map(r => ({
+            ...r,
+            _parsed: ebayData.parsed,
+            _source: "ebay"
+          }));
           setResults(prev => [...prev, ...ebayResults]);
           setParsedQueries(prev => [...prev, ebayData.parsed]);
         } else {
           console.warn("⚠️ eBay search failed for query:", query);
         }
   
-        // Handle KSL
-        if (isKslAllowed && kslRes && kslRes.status === "fulfilled" && kslRes.value && kslRes.value.ok) {
-          const kslData = await kslRes.value.json();
-          const kslResults = kslData.map(r => ({
-            ...r,
-            _parsed: parsedQuery,
-            _source: "ksl"
-          }));
-          setResults(prev => [...prev, ...kslResults]);
-        } else if (isKslAllowed && kslRes && kslRes.status === "fulfilled" && kslRes.value && typeof kslRes.value.text === "function") {
-          const errorText = await kslRes.value.text();
-          console.warn("⚠️ KSL response failed:", errorText);
-        } else if (isKslAllowed && kslRes && kslRes.status === "rejected") {
-          console.warn("❌ KSL fetch crashed:", kslRes.reason);
-        } else if (isKslAllowed) {
-          console.warn("❓ Unknown KSL result:", kslRes);
+        // Now do KSL using refinedQuery
+        if (isKslAllowed) {
+          try {
+            const kslRes = await fetch("https://flipfinder.onrender.com/ksl_deals", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                search: refinedQuery,
+                city: userCity,
+                state: userState
+              })
+            });
+  
+            if (kslRes.ok) {
+              const kslData = await kslRes.json();
+              const kslResults = kslData.map(r => ({
+                ...r,
+                _parsed: refinedQuery,
+                _source: "ksl"
+              }));
+              setResults(prev => [...prev, ...kslResults]);
+            } else {
+              const errText = await kslRes.text();
+              console.warn("⚠️ KSL failed with:", errText);
+            }
+          } catch (kslErr) {
+            console.error("❌ KSL fetch crashed:", kslErr);
+          }
         }
       }
     } catch (error) {
@@ -541,6 +540,7 @@ function App() {
       setIsLoading(false);
     }
   }
+  
   
   
 
