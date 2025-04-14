@@ -525,7 +525,7 @@ function App() {
           console.log(`✅ eBay finished for ${source} query:`, query);
   
           // 🧭 KSL runs only for alt1 and alt2
-          if (source === "alt1" || source === "alt2") {
+          if (["user", "alt1", "alt2"].includes(source)) {
             console.log("🚀 KSL fetch sending for:", query);
             try {
               const kslRes = await fetch("https://flipfinder.onrender.com/ksl_deals", {
@@ -537,26 +537,26 @@ function App() {
                   state: userState
                 })
               });
-  
+          
               if (!kslRes.ok) {
                 const errText = await kslRes.text();
                 console.warn(`⚠️ KSL failed for query ${query}:`, errText);
                 return;
               }
-  
+          
               const kslData = await kslRes.json();
               const kslResults = kslData.map(r => ({
                 ...r,
                 _parsed: query,
                 _source: "ksl"
               }));
-  
+          
               setResults(prev => [...prev, ...kslResults]);
               console.log(`✅ KSL done for query ${query} — ${kslResults.length} results`);
             } catch (err) {
               console.error("❌ KSL fetch crashed:", err);
             }
-          }
+          }          
         } catch (err) {
           console.error(`❌ Error with ${source} query "${query}":`, err);
         }

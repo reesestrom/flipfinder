@@ -754,16 +754,23 @@ Original parsed intent:
 - Include terms: {original_include_terms}
 - Exclude terms: {original_exclude_terms}
 
-You must rephrase the original product query using simpler or more natural phrasing for eBay search titles.
+Please rewrite the search query to create a **slightly different but valid simplified version** of the original product query. This new version must:
 
-- The goal is to make the search slightly simpler or more effective — not different.
-- The ONLY time you may add words that did not already exist is if the previous query and the original query are the same. in which case you may add one simple word for example "chair" -> "wood chair"
-- You may remove adjectives or redundant words but NEVER change the product category or model.
-- You MUST preserve brand names and key product types.
-- NEVER add new words, synonyms, or change the user's intent.
-- The new query should be a max of 2–3 words, just a simplified product name.
+- Be written in the natural style of eBay product titles
+- Focus **only on the core product name**
+- Be **no longer than 2–3 words**
+- Remove unnecessary adjectives or descriptors (e.g., “used”, “damaged”, “refurbished”) from the query, and use those to update the condition of the item.
+- Retain brand names
+- **Be different from previous attempts**, while still being valid for the same product
+- DO NOT add unrelated words
+- DO NOT invent product variations or change the category
 
-Only include additional include/exclude terms if they were clearly stated by the user.
+The goal is to find **another natural phrasing** for the same product type. This should improve the chance of matching existing listings.
+
+Examples:
+- “used kitchenaid mixer” → “kitchenaid mixer”
+- “broken dyson vacuum” → “dyson vacuum”
+- “dell xps 13 ultrabook” → “dell xps 13”
 
 Return ONLY valid JSON:
 {{
