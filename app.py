@@ -94,6 +94,8 @@ async def ksl_deals(nq: NaturalQuery):
     import httpx
     from description_refiner import refine_title_and_condition
     from price_estimator import refined_avg_price
+    print("🔍 Sending KSL scraper request to:")
+    print(f"https://ksl-scraper.onrender.com/ksl?query={query}&city={city or ''}&state={state or ''}")
 
     try:
         query = nq.search
@@ -107,6 +109,7 @@ async def ksl_deals(nq: NaturalQuery):
             )
 
         listings = response.json()
+    
 
         async def process_listing(listing):
             title = listing.get("title", "")
