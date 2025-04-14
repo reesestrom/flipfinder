@@ -734,7 +734,7 @@ def search_ebay(parsed, original_input, postal_code=None):
         raw_items = run_ebay_search(q, cond, includes, excludes, postal_code)
         return filter_and_score(raw_items, includes, excludes)
 
-    async def gpt_fallback_search(iteration_num, original_input, original_query, original_include_terms, original_exclude_terms, condition):
+    async def gpt_fallback_search(iteration_num, original_input, original_query, original_include_terms, original_exclude_terms, condition, seen_queries):
         prompt = f"""
 You're helping refine a resale-related eBay search based on a user's original message.
 
@@ -804,10 +804,11 @@ Return ONLY valid JSON:
     asyncio.set_event_loop(loop)
 
     parallel_results = loop.run_until_complete(asyncio.gather(
-        run_raw_query(),
-        gpt_fallback_search(1, original_input, query, include_terms, exclude_terms, condition),
-        gpt_fallback_search(2, original_input, query, include_terms, exclude_terms, condition)
+    run_raw_query(),
+    gpt_fallback_search(1, original_input, query, include_terms, exclude_terms, condition, seen_queries),
+    gpt_fallback_search(2, original_input, query, include_terms, exclude_terms, condition, seen_queries)
     ))
+
 
     alt1_query = ""
     alt2_query = ""
