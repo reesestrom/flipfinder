@@ -105,10 +105,15 @@ async def ksl_deals(nq: NaturalQuery):
             safe_query = quote(query or "")
             safe_city = quote(city or "")
             safe_state = quote(state or "")
-
+            print(safe_query)
+            print(safe_city)
+            print(safe_state)
             response = await client.get(
                 f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}"
             )
+            print("📬 Scraper response status:", response.status_code)
+            print("📦 Raw response text:", response.text)
+
 
 
         listings = response.json()
