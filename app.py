@@ -22,6 +22,7 @@ import statistics
 from price_estimator import refined_avg_price
 from fastapi import Request
 import httpx
+from urllib.parse import quote
 
 
 
@@ -90,24 +91,25 @@ class NaturalQuery(BaseModel):
 from fastapi import Body
 
 @app.post("/ksl_deals")
-async def ksl_deals(nq: NaturalQuery):
-    import httpx
-    from description_refiner import refine_title_and_condition
-    from price_estimator import refined_avg_price
-    
-    
+async def ksl_deals(nq: NaturalQuery):  
     try:
         query = nq.search
         city = nq.city
         state = nq.state
 
         print("🔍 Sending KSL scraper request to:")
-        print(f"https://ksl-scraper.onrender.com/ksl?query={query}&city={city or ''}&state={state or ''}")
+        print(f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}")
         
         async with httpx.AsyncClient() as client:
+
+            safe_query = quote(query or "")
+            safe_city = quote(city or "")
+            safe_state = quote(state or "")
+
             response = await client.get(
-                f"https://ksl-scraper.onrender.com/ksl?query={query}&city={city or ''}&state={state or ''}"
+                f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&city={safe_city}&state={safe_state}"
             )
+
 
         listings = response.json()
     
