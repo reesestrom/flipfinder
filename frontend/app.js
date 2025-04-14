@@ -469,7 +469,9 @@ function App() {
     }
   
     try {
-      for (const query of searchInputs) {
+      for (let i = 0; i < searchInputs.length; i++) {
+        const query = searchInputs[i];
+        const isKslAllowed = i > 0 && i <= 2;      
         const parsedQuery = query;
   
         // Start both requests simultaneously
@@ -482,18 +484,24 @@ function App() {
           })
         });
   
-        const kslPromise = fetch("https://flipfinder.onrender.com/ksl_deals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            search: query,
-            city: userCity,
-            state: userState
-          })
-        });
+        const kslPromise = isKslAllowed
+          ? fetch("https://flipfinder.onrender.com/ksl_deals", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                search: query,
+                city: userCity,
+                state: userState
+              })
+            })
+          : null;
+
   
-        const [ebayRes, kslRes] = await Promise.allSettled([ebayPromise, kslPromise]);
-  
+          const [ebayRes, kslRes] = await Promise.allSettled([
+            ebayPromise,
+            isKslAllowed ? kslPromise : Promise.resolve({ status: "skipped" })
+          ]);
+            
         // Handle eBay
         if (ebayRes.status === "fulfilled" && ebayRes.value.ok) {
           const ebayData = await ebayRes.value.json();
@@ -505,7 +513,7 @@ function App() {
         }
   
         // Handle KSL
-        if (kslRes.status === "fulfilled" && kslRes.value.ok) {
+        if (isKslAllowed && kslRes.status === "fulfilled" && kslRes.value.ok) {
           const kslData = await kslRes.value.json();
           const kslResults = kslData.map(r => ({
             ...r,
@@ -893,17 +901,18 @@ React.createElement("div", {
         justifyContent: "space-between"
       }
     },
+    // ⭐ Star button (matches eBay style)
     React.createElement("button", {
-      className: "star-btn",
-      onClick: () => toggleStar(item),
+      onClick: () => toggleSaveItem(item),
       style: {
-        fontSize: "20px",
-        marginRight: "10px",
+        fontSize: "24px",
         background: "none",
         border: "none",
-        cursor: "pointer"
+        cursor: "pointer",
+        color: savedItems.some(i => i.url === item.url) ? "gold" : "#ccc",
+        marginRight: "10px"
       }
-    }, savedItems.includes(item.url)    ? "★" : "☆"),      
+    }, "★"),
     React.createElement("a", {
         href: item.url,
         target: "_blank",
