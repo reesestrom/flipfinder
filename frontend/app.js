@@ -43,7 +43,8 @@ function App() {
     const storedUser = localStorage.getItem("user");
     const storedPrefs = localStorage.getItem("userPreferences");
     const storedZip = localStorage.getItem("zip");
-    
+    const storedCity = localStorage.getItem("city");
+    const storedState = localStorage.getItem("state");
   
     if (storedUser) {
       setUsername(storedUser);
@@ -58,13 +59,23 @@ function App() {
             .filter(s => s.auto_search_enabled)
             .map(s => s.query_text);
           setAutoSearches(enabled);
-          setSearchInputs(enabled.length > 0 ? enabled : [""]); // 👈 this is what was missing
+          setSearchInputs(enabled.length > 0 ? enabled : [""]);
         })
         .catch(err => console.error("Failed to load auto-searches:", err));
     }
+  
     if (storedZip) {
       setUserZip(storedZip);
-    } else {
+    }
+    if (storedCity) {
+      setUserCity(storedCity);
+    }
+    if (storedState) {
+      setUserState(storedState);
+    }
+  
+    // ✅ Fallback if ZIP wasn’t already stored
+    if (!storedZip || !storedCity || !storedState) {
       fetchZipFromLocation()
         .then(({ zip, city, state }) => {
           if (zip) {
@@ -79,10 +90,12 @@ function App() {
             setUserState(state);
             localStorage.setItem("state", state);
           }
+          console.log("🌎 Location loaded:", { zip, city, state });
         })
         .catch(err => console.warn("Could not get ZIP/city/state from geolocation:", err));
-    }    
+    }
   }, []);
+  
  
   useEffect(() => {
     if (!username) return;
