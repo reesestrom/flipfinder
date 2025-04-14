@@ -19,6 +19,9 @@ from password_reset import router as reset_router
 from pydantic import BaseModel
 from db import get_db
 import statistics
+from price_estimator import refined_avg_price
+from fastapi import Request
+import httpx
 
 
 
@@ -79,6 +82,64 @@ class ChangeEmailRequest(BaseModel):
     new_email: str
 
 from fastapi import Body
+
+@app.post("/ksl_deals")
+async def ksl_deals(nq: NaturalQuery):
+    import httpx
+    from description_refiner import refine_title_and_condition
+    from price_estimator import refined_avg_price
+
+    try:
+        query = nq.search
+        city = nq.city
+        state = nq.state
+        print(f"🟢 Scraping KSL for {query} near {city}, {state}")
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://ksl-scraper.onrender.com/ksl?query={query}&city={city or ''}&state={state or ''}"
+            )
+
+        listings = response.json()
+
+        async def process_listing(listing):
+            title = listing.get("title", "")
+            if not title or not listing.get("price"):
+                return None
+            try:
+                refinement = refine_title_and_condition(title, "", "used")
+                resale = refined_avg_price(refinement["refined_query"], refinement["adjusted_condition"])
+                price = float(listing["price"])
+                profit = (resale * 0.85) - price
+                roi = round(profit / price, 2)
+                if roi < ROI_THRESHOLD:
+                    return None
+                return {
+                    "title": title,
+                    "price": price,
+                    "profit": profit,
+                    "roi": roi,
+                    "location": listing.get("location"),
+                    "datePosted": listing.get("datePosted"),
+                    "url": listing.get("listingUrl"),
+                    "thumbnail": listing.get("imageUrl"),
+                    "refined_query": refinement["refined_query"],
+                    "adjusted_condition": refinement["adjusted_condition"]
+                }
+            except Exception as e:
+                print("❌ Error processing KSL listing:", e)
+                return None
+
+        # Process top 10 KSL listings in parallel
+        results = await asyncio.gather(*[process_listing(l) for l in listings[:10]])
+        cleaned = [r for r in results if r]
+        cleaned.sort(key=lambda x: x["profit"], reverse=True)
+        return cleaned[:5]
+
+    except Exception as e:
+        print("❌ Error in /ksl_deals:", e)
+        raise HTTPException(status_code=500, detail="Failed to process KSL listings")
+
 
 @app.post("/request_password_reset")
 def request_password_reset(email: str = Body(...), db: Session = Depends(get_db)):

@@ -31,8 +31,8 @@ function App() {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [email, setEmail] = useState("");
-
-
+  const [userCity, setUserCity] = useState("");
+  const [userState, setUserState] = useState("");
 
   
   
@@ -65,16 +65,23 @@ function App() {
     if (storedZip) {
       setUserZip(storedZip);
     } else {
-      // ✅ Try to detect ZIP via geolocation and store it
       fetchZipFromLocation()
-        .then(zip => {
+        .then(({ zip, city, state }) => {
           if (zip) {
             setUserZip(zip);
             localStorage.setItem("zip", zip);
           }
+          if (city) {
+            setUserCity(city);
+            localStorage.setItem("city", city);
+          }
+          if (state) {
+            setUserState(state);
+            localStorage.setItem("state", state);
+          }
         })
-        .catch(err => console.warn("Could not get ZIP from geolocation:", err));
-    }
+        .catch(err => console.warn("Could not get ZIP/city/state from geolocation:", err));
+    }    
   }, []);
  
   useEffect(() => {
@@ -281,15 +288,20 @@ function App() {
           );
   
           const data = await response.json();
-          const zip = data?.results?.[0]?.components?.postcode;
-          resolve(zip || null);
+          const components = data?.results?.[0]?.components;
+  
+          const zip = components?.postcode || null;
+          const city = components?.city || components?.town || components?.village || null;
+          const state = components?.state_code || null;
+  
+          resolve({ zip, city, state });
         } catch (err) {
-          console.error("Failed to fetch ZIP code from OpenCage:", err);
+          console.error("Failed to fetch ZIP/city/state from OpenCage:", err);
           reject(err);
         }
       }, reject);
     });
-  }
+  }  
   
   
   
@@ -423,62 +435,83 @@ function App() {
   
 
   async function handleSearch() {
-  setIsLoading(true);
-  setResults([]);
-  setParsedQueries([]);
-  setListingsSearched(0);
-
-  const evtSource = new EventSource("https://flipfinder.onrender.com/events");
-  evtSource.onmessage = function (event) {
-    if (event.data === "increment") {
-      setListingsSearched(prev => prev + 1);
+    setIsLoading(true);
+    setResults([]);
+    setParsedQueries([]);
+    setListingsSearched(0);
+  
+    const evtSource = new EventSource("https://flipfinder.onrender.com/events");
+    evtSource.onmessage = function (event) {
+      if (event.data === "increment") {
+        setListingsSearched(prev => prev + 1);
+      }
+    };
+  
+    let allResults = [];
+    let parsedSet = [];
+  
+    // ✅ Stop if city/state not available for local KSL
+    if (!userCity || !userState) {
+      alert("📍 Local KSL search requires location access. Please enable location services.");
+      setIsLoading(false);
+      evtSource.close();
+      return;
     }
-  };
-
-  let allResults = [];
-  let parsedSet = [];
-
-  try {
-    const queryPromises = searchInputs.map(async (query) => {
-      const res = await fetch("https://flipfinder.onrender.com/ai_search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          search: query,
-          postalCode: userZip || "10001"
-        })
-      });
-    
-      if (!res.ok) throw new Error("Search failed");
-    
-      const data = await res.json();
-      const parsed = data.parsed;
-      const results = data.results.map(r => ({ ...r, _parsed: parsed }));
-    
-      return { results, parsed };
-    });
-    
+  
     try {
-      const allQueryResults = await Promise.all(queryPromises);
-    
-      const combinedResults = allQueryResults.flatMap(r => r.results);
-      const combinedParsed = allQueryResults.map(r => r.parsed);
-    
-      setResults(combinedResults);
-      setParsedQueries(combinedParsed);
+      const queryPromises = searchInputs.map(async (query) => {
+        const [ebayRes, kslRes] = await Promise.all([
+          fetch("https://flipfinder.onrender.com/ai_search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              search: query,
+              postalCode: userZip || "10001"
+            })
+          }),
+          fetch("https://flipfinder.onrender.com/ksl_deals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              search: query,
+              city: userCity,
+              state: userState
+            })
+          })
+        ]);
+  
+        if (!ebayRes.ok || !kslRes.ok) throw new Error("Search failed");
+  
+        const ebayData = await ebayRes.json();
+        const kslData = await kslRes.json();
+  
+        const parsed = ebayData.parsed;
+        const ebayResults = ebayData.results.map(r => ({ ...r, _parsed: parsed }));
+        const kslResults = kslData.map(r => ({ ...r, _parsed: parsed, _source: "ksl" }));
+  
+        return { ebayResults, kslResults, parsed };
+      });
+  
+      try {
+        const allQueryResults = await Promise.all(queryPromises);
+        const combinedResults = allQueryResults.flatMap(r => [...r.kslResults, ...r.ebayResults]);
+        const combinedParsed = allQueryResults.map(r => r.parsed);
+  
+        setResults(combinedResults);
+        setParsedQueries(combinedParsed);
+      } catch (error) {
+        alert("Error performing one of the searches.");
+        console.error("Search error:", error);
+      }
     } catch (error) {
       alert("Error performing one of the searches.");
       console.error("Search error:", error);
+    } finally {
+      evtSource.close(); // ✅ Clean up
+      setIsLoading(false);
     }
-    
-  } catch (error) {
-    alert("Error performing one of the searches.");
-    console.error("Search error:", error);
-  } finally {
-    evtSource.close(); // ✅ Clean up
-    setIsLoading(false);
   }
-}
+  
 
   
   
@@ -829,6 +862,82 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
       "Listings Searched: ",
       React.createElement("span", { style: { color: "#4CAF50", fontWeight: "bold" } }, listingsSearched)
     ),    
+    results.some(r => r._source === "ksl") &&
+React.createElement("div", {
+  className: "result-box",
+  style: { marginBottom: "30px", background: "#fdfdfd" }
+},
+  React.createElement("h2", null, "📍 Local KSL Listings"),
+  results.filter(r => r._source === "ksl").map((item, i) =>
+    React.createElement("div", {
+      key: `ksl-${i}`,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        marginBottom: "20px",
+        justifyContent: "space-between"
+      }
+    },
+      React.createElement("a", {
+        href: item.url,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        style: {
+          display: "flex",
+          alignItems: "center",
+          textDecoration: "none",
+          color: "inherit",
+          gap: "12px",
+          flexGrow: 1
+        }
+      },
+        item.thumbnail &&
+        React.createElement("img", {
+          src: item.thumbnail,
+          alt: item.title,
+          style: {
+            width: "100px",
+            height: "auto",
+            objectFit: "cover",
+            borderRadius: "10px",
+            boxShadow: "0 0 4px rgba(0,0,0,0.15)"
+          }
+        }),
+        React.createElement("div", { className: "details" },
+          React.createElement("div", null, item.title),
+          React.createElement("div", { className: "price" }, `$${item.price.toFixed(2)}`)
+        )
+      ),
+      React.createElement("div", {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          marginLeft: "10px"
+        }
+      }, [
+        React.createElement("span", {
+          key: "label",
+          style: {
+            fontSize: "12px",
+            fontWeight: "bold",
+            color: "#888",
+            marginBottom: "4px"
+          }
+        }, "Potential Profit"),
+        React.createElement("span", {
+          key: "value",
+          className: "profit",
+          style: {
+            color: item.profit >= 0 ? "#2ecc71" : "red",
+            fontSize: "24px",
+            fontWeight: "bold"
+          }
+        }, `$${item.profit.toFixed(2)}`)
+      ])
+    )
+  )
+),
     React.createElement("div", { className: "result-box", style: { marginTop: "20px" } },
       React.createElement("h2", null, "Top Resale Opportunities"),
       results.length > 0 ? results.map((item, i) =>
