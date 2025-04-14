@@ -460,10 +460,6 @@ function App() {
       }
     };
   
-    let allResults = [];
-    let parsedSet = [];
-  
-    // ✅ Stop if city/state not available for local KSL
     console.log("📍 Location state:", { userZip, userCity, userState });
     if (!userCity || !userState) {
       alert("📍 Local KSL search requires location access. Please enable location services.");
@@ -473,49 +469,53 @@ function App() {
     }
   
     try {
-      const queryPromises = searchInputs.map(async (query) => {
-        const [ebayRes, kslRes] = await Promise.all([
-          fetch("https://flipfinder.onrender.com/ai_search", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              search: query,
-              postalCode: userZip || "10001"
-            })
-          }),
-          fetch("https://flipfinder.onrender.com/ksl_deals", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              search: query,
-              city: userCity,
-              state: userState
-            })
+      for (const query of searchInputs) {
+        const parsedQuery = query;
+  
+        // Start both requests simultaneously
+        const ebayPromise = fetch("https://flipfinder.onrender.com/ai_search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            search: query,
+            postalCode: userZip || "10001"
           })
-        ]);
+        });
   
-        if (!ebayRes.ok || !kslRes.ok) throw new Error("Search failed");
+        const kslPromise = fetch("https://flipfinder.onrender.com/ksl_deals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            search: query,
+            city: userCity,
+            state: userState
+          })
+        });
   
-        const ebayData = await ebayRes.json();
-        const kslData = await kslRes.json();
+        const [ebayRes, kslRes] = await Promise.allSettled([ebayPromise, kslPromise]);
   
-        const parsed = ebayData.parsed;
-        const ebayResults = ebayData.results.map(r => ({ ...r, _parsed: parsed }));
-        const kslResults = kslData.map(r => ({ ...r, _parsed: parsed, _source: "ksl" }));
+        // Handle eBay
+        if (ebayRes.status === "fulfilled" && ebayRes.value.ok) {
+          const ebayData = await ebayRes.value.json();
+          const ebayResults = ebayData.results.map(r => ({ ...r, _parsed: ebayData.parsed, _source: "ebay" }));
+          setResults(prev => [...prev, ...ebayResults]);
+          setParsedQueries(prev => [...prev, ebayData.parsed]);
+        } else {
+          console.warn("⚠️ eBay search failed for query:", query);
+        }
   
-        return { ebayResults, kslResults, parsed };
-      });
-  
-      try {
-        const allQueryResults = await Promise.all(queryPromises);
-        const combinedResults = allQueryResults.flatMap(r => [...r.kslResults, ...r.ebayResults]);
-        const combinedParsed = allQueryResults.map(r => r.parsed);
-  
-        setResults(combinedResults);
-        setParsedQueries(combinedParsed);
-      } catch (error) {
-        alert("Error performing one of the searches.");
-        console.error("Search error:", error);
+        // Handle KSL
+        if (kslRes.status === "fulfilled" && kslRes.value.ok) {
+          const kslData = await kslRes.value.json();
+          const kslResults = kslData.map(r => ({
+            ...r,
+            _parsed: parsedQuery,
+            _source: "ksl"
+          }));
+          setResults(prev => [...prev, ...kslResults]);
+        } else {
+          console.warn("⚠️ KSL search failed for query:", query);
+        }
       }
     } catch (error) {
       alert("Error performing one of the searches.");
@@ -525,6 +525,7 @@ function App() {
       setIsLoading(false);
     }
   }
+  
   
 
   
@@ -881,7 +882,7 @@ React.createElement("div", {
   className: "result-box",
   style: { marginBottom: "30px", background: "#fdfdfd" }
 },
-  React.createElement("h2", null, "📍 Local KSL Listings"),
+  React.createElement("h2", null, "Local KSL Listings"),
   results.filter(r => r._source === "ksl").map((item, i) =>
     React.createElement("div", {
       key: `ksl-${i}`,
@@ -892,7 +893,18 @@ React.createElement("div", {
         justifyContent: "space-between"
       }
     },
-      React.createElement("a", {
+    React.createElement("button", {
+      className: "star-btn",
+      onClick: () => toggleStar(item),
+      style: {
+        fontSize: "20px",
+        marginRight: "10px",
+        background: "none",
+        border: "none",
+        cursor: "pointer"
+      }
+    }, starredItems.includes(item.url) ? "★" : "☆"),      
+    React.createElement("a", {
         href: item.url,
         target: "_blank",
         rel: "noopener noreferrer",
@@ -953,8 +965,9 @@ React.createElement("div", {
   )
 ),
     React.createElement("div", { className: "result-box", style: { marginTop: "20px" } },
-      React.createElement("h2", null, "Top Resale Opportunities"),
-      results.length > 0 ? results.map((item, i) =>
+      React.createElement("h2", null, "Top Ebay Listings"),
+      results.length > 0
+        ? results.filter(r => r._source !== "ksl").map((item, i) =>
         React.createElement("div", {
           key: i,
           style: {
