@@ -754,15 +754,15 @@ Original parsed intent:
 - Include terms: {original_include_terms}
 - Exclude terms: {original_exclude_terms}
 
-Please try a **new, independent** eBay-style search query:
-- Do not copy the previous fallback search query, instead search something that is different yet fundamentally related to the original seearch query
-- Additionally, do not make adjustments to included and excluded terms by removing, changing, or finding synonms for them
-- Reword the `query` to be simpler or more natural for eBay titles.
-- The query should NEVER EXCEED 2-3 words
-- You may simplify or remove unnecessary words from the query and move them to include_terms.
-- Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
-- Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing \"broken\" to \"not working\")
-- Do NOT add unrelated words like \"flipping\", \"resale\", or adjectives like \"mint\", unless the user originally said so.
+You must rephrase the original product query using simpler or more natural phrasing for eBay search titles.
+
+- The goal is to make the search slightly simpler or more effective — not different.
+- You may remove adjectives or redundant words but NEVER change the product category or model.
+- You MUST preserve brand names and key product types.
+- NEVER add new words, synonyms, or change the user's intent.
+- The new query should be a max of 2–3 words, just a simplified product name.
+
+Only include additional include/exclude terms if they were clearly stated by the user.
 
 Return ONLY valid JSON:
 {{
