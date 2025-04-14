@@ -95,6 +95,8 @@ import time
 
 @app.post("/ksl_deals")
 async def ksl_deals(nq: NaturalQuery):
+    import inspect
+    print("⚙️  /ksl_deals is async:", inspect.iscoroutinefunction(ksl_deals))
     start_time = time.time()
     try:
         query = nq.search
