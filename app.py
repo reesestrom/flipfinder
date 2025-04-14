@@ -155,6 +155,10 @@ async def ksl_deals(nq: NaturalQuery):
                 traceback.print_exc()
                 return None
 
+        # ✅ Increment frontend counter for each listing evaluated
+        for _ in range(10):  # or however many listings you're about to filter
+            await message_queue.put("increment")
+
         results = await asyncio.gather(*[process_listing(l, i) for i, l in enumerate(listings[:10])])
         cleaned = [r for r in results if r]
         cleaned.sort(key=lambda x: x["profit"], reverse=True)

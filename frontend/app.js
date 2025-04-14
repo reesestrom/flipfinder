@@ -469,54 +469,71 @@ function App() {
     }
   
     try {
-      for (const query of searchInputs) {
-        const parsedQuery = query;
+      const queryTasks = searchInputs.map(async (query, i) => {
+        const isKslAllowed = i > 0 && i <= 2;
   
-        // Start both requests simultaneously
-        const ebayPromise = fetch("https://flipfinder.onrender.com/ai_search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            search: query,
-            postalCode: userZip || "10001"
-          })
-        });
+        try {
+          const ebayRes = await fetch("https://flipfinder.onrender.com/ai_search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              search: query,
+              postalCode: userZip || "10001"
+            })
+          });
   
-        const kslPromise = fetch("https://flipfinder.onrender.com/ksl_deals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            search: query,
-            city: userCity,
-            state: userState
-          })
-        });
+          if (!ebayRes.ok) throw new Error("eBay request failed");
   
-        const [ebayRes, kslRes] = await Promise.allSettled([ebayPromise, kslPromise]);
+          const ebayData = await ebayRes.json();
+          const refinedQuery = ebayData.parsed?.query || query;
   
-        // Handle eBay
-        if (ebayRes.status === "fulfilled" && ebayRes.value.ok) {
-          const ebayData = await ebayRes.value.json();
-          const ebayResults = ebayData.results.map(r => ({ ...r, _parsed: ebayData.parsed, _source: "ebay" }));
+          const ebayResults = ebayData.results.map(r => ({
+            ...r,
+            _parsed: ebayData.parsed,
+            _source: "ebay"
+          }));
           setResults(prev => [...prev, ...ebayResults]);
           setParsedQueries(prev => [...prev, ebayData.parsed]);
-        } else {
-          console.warn("⚠️ eBay search failed for query:", query);
-        }
   
-        // Handle KSL
-        if (kslRes.status === "fulfilled" && kslRes.value.ok) {
-          const kslData = await kslRes.value.json();
-          const kslResults = kslData.map(r => ({
-            ...r,
-            _parsed: parsedQuery,
-            _source: "ksl"
-          }));
-          setResults(prev => [...prev, ...kslResults]);
-        } else {
-          console.warn("⚠️ KSL search failed for query:", query);
+          console.log(`✅ eBay finished for input ${i + 1}:`, refinedQuery);
+  
+          if (isKslAllowed) {
+            console.log(`🚀 KSL trigger allowed for input ${i + 1}, running with query:`, refinedQuery);
+            try {
+              const kslRes = await fetch("https://flipfinder.onrender.com/ksl_deals", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  search: refinedQuery,
+                  city: userCity,
+                  state: userState
+                })
+              });
+          
+              if (!kslRes.ok) {
+                const errText = await kslRes.text();
+                console.warn(`⚠️ KSL failed for query ${refinedQuery}:`, errText);
+                return;
+              }
+          
+              const kslData = await kslRes.json();
+              const kslResults = kslData.map(r => ({
+                ...r,
+                _parsed: refinedQuery,
+                _source: "ksl"
+              }));
+              setResults(prev => [...prev, ...kslResults]);
+              console.log(`✅ KSL done for query ${refinedQuery} — ${kslResults.length} results`);
+            } catch (err) {
+              console.error("❌ KSL fetch crashed:", err);
+            }
+          }          
+        } catch (err) {
+          console.error("❌ Error with query input:", query, err);
         }
-      }
+      });
+  
+      await Promise.all(queryTasks);
     } catch (error) {
       alert("Error performing one of the searches.");
       console.error("Search error:", error);
@@ -525,6 +542,7 @@ function App() {
       setIsLoading(false);
     }
   }
+  
   
   
 
