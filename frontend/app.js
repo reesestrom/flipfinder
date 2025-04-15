@@ -453,12 +453,32 @@ function App() {
     setParsedQueries([]);
     setListingsSearched(0);
   
-    const evtSource = new EventSource("https://flipfinder.onrender.com/events");
     evtSource.onmessage = function (event) {
-      if (event.data === "increment") {
-        setListingsSearched(prev => prev + 1);
+      try {
+        const msg = JSON.parse(event.data);
+    
+        if (msg.type === "increment") {
+          setListingsSearched(prev => prev + 1);
+        } else if (msg.type === "new_result") {
+          const item = msg.data;
+          setResults(prev => {
+            const updated = [...prev, item];
+            return updated
+              .filter((item, index, self) => index === self.findIndex(i => i.url === item.url))
+              .sort((a, b) => b.profit - a.profit)
+              .slice(0, 5);
+          });
+        }
+      } catch (err) {
+        // fallback for legacy plain-string increment
+        if (event.data === "increment") {
+          setListingsSearched(prev => prev + 1);
+        } else {
+          console.warn("Unhandled event stream data:", event.data);
+        }
       }
     };
+    
   
     console.log("📍 Location state:", { userZip, userCity, userState });
     if (!userCity || !userState) {
@@ -544,14 +564,8 @@ function App() {
                 return;
               }
           
-              const kslData = await kslRes.json();
-              const kslResults = kslData.map(r => ({
-                ...r,
-                _parsed: query,
-                _source: "ksl"
-              }));
-          
-              setResults(prev => [...prev, ...kslResults]);
+              await kslRes.json(); // we're already handling results live from SSE
+
               console.log(`✅ KSL done for query ${query} — ${kslResults.length} results`);
             } catch (err) {
               console.error("❌ KSL fetch crashed:", err);
@@ -980,6 +994,10 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             }),
             React.createElement("div", { className: "details" },
               React.createElement("div", null, item.title),
+              item.location &&
+              React.createElement("div", {
+                style: { fontSize: "14px", color: "#666", marginTop: "4px" }
+              }, `Location: ${item.location}`),
               React.createElement("div", { className: "price" }, `$${item.price.toFixed(2)}`)
             )
           ),

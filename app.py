@@ -93,58 +93,101 @@ import json
 import traceback
 import time
 
+
 @app.post("/ksl_deals")
 async def ksl_deals(nq: NaturalQuery):
     start_time = time.time()
     try:
         query = nq.search or ""
-        city = nq.city or ""
         state = nq.state or ""
-        print(f"\n🟢 /ksl_deals started for: {query} [{city}, {state}]")
+        print(f"\n🟢 /ksl_deals started for: {query} [{state}]")
 
         safe_query = quote(query)
-        safe_city = quote(city)
         safe_state = quote(state)
 
-        scraper_url = f"https://ksl-scraper.onrender.com/ksl?query={safe_query}&state={safe_state}"
-        print("🔍 Sending KSL scraper request to:")
-        print(scraper_url)
+        async def fetch_and_process(scrape_query, label="main"):
+            try:
+                encoded = quote(scrape_query)
+                url = f"https://ksl-scraper.onrender.com/ksl?query={encoded}&state={safe_state}"
+                print(f"🌐 [{label}] URL:", url)
 
-        async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.get(scraper_url)
-            print("📬 Scraper response status:", response.status_code)
+                async with httpx.AsyncClient(timeout=120) as client:
+                    res = await client.get(url)
+                    if res.status_code != 200:
+                        print(f"❌ [{label}] Request failed")
+                        return []
 
-            raw_bytes = await response.aread()
-            raw_text = raw_bytes.decode("utf-8", errors="ignore")
-            print("📦 Raw response (first 300 chars):", raw_text[:300])
+                    raw_text = res.text
+                    raw_json = json.loads(raw_text)
+                    print(f"📦 [{label}] Listings returned:", len(raw_json))
 
-            if response.status_code != 200:
-                raise HTTPException(status_code=502, detail="KSL scraper failed")
+                    results = await asyncio.gather(*[
+                        process_listing(l, i) for i, l in enumerate(raw_json[:10])
+                    ])
+                    return [r for r in results if r]
+            except Exception:
+                print(f"❌ Exception in [{label}] processing:")
+                traceback.print_exc()
+                return []
+
+        async def gpt_ksl_fallback_query(original_input: str, iteration: int):
+            prompt = f"""
+You're helping with a local classified search (KSL). Your goal is to simplify the user's original query into short, high-quality search terms that match titles on a local resale website.
+
+Guidelines:
+- The returned query must be **2–3 keywords only**
+- Avoid unnecessary descriptors like "good condition", "missing parts", etc.
+- Avoid filler like "used", "buy", or "cheap"
+- NEVER repeat the original query exactly
+- Emphasize brand and product type (e.g., "kitchenaid mixer", "nintendo switch lite")
+
+Original user search:
+"{original_input}"
+
+Return ONLY valid JSON:
+{{ "query": "simple product keywords" }}
+"""
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You simplify product search queries for local listings."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```json"):
+                raw = raw.removeprefix("```json").strip()
+            if raw.endswith("```"):
+                raw = raw.removesuffix("```").strip()
+            raw = re.sub(r",(\s*[}\]])", r"\1", raw)
 
             try:
-                listings = json.loads(raw_text)
-                if not isinstance(listings, list):
-                    raise ValueError("KSL returned non-list JSON.")
-                print(f"✅ Parsed listing count: {len(listings)}")
+                return json.loads(raw)["query"]
             except Exception:
-                print("❌ Scraper response not valid JSON:")
+                print(f"❌ Failed to parse fallback KSL query for iteration {iteration}:")
                 traceback.print_exc()
-                raise HTTPException(status_code=502, detail="KSL returned invalid response")
+                return None
 
         async def process_listing(listing, i):
             try:
                 title = listing.get("title", "")
                 if not title or not listing.get("price"):
                     return None
+
+                # 🔄 Increment counter for live tracking
+                await message_queue.put("increment")
+
+                # 💡 Process profit
                 refinement = refine_title_and_condition(title, "", "used")
                 resale = refined_avg_price(refinement["refined_query"], refinement["adjusted_condition"])
                 price = float(listing["price"])
                 profit = (resale * 0.85) - price
                 roi = round(profit / price, 2)
+
                 if roi < ROI_THRESHOLD:
                     return None
-                print(f"🧮 #{i} OK: {title} | ROI: {roi:.2f} | Profit: ${profit:.2f}")
-                return {
+
+                result = {
                     "title": title,
                     "price": price,
                     "profit": profit,
@@ -157,22 +200,44 @@ async def ksl_deals(nq: NaturalQuery):
                     "adjusted_condition": refinement["adjusted_condition"],
                     "_source": "ksl"
                 }
+
+                # ✅ Send to frontend immediately
+                await message_queue.put(json.dumps({"type": "new_result", "data": result}))
+                return result
+
             except Exception:
                 print(f"❌ Error processing listing #{i}:")
                 traceback.print_exc()
                 return None
 
-        # ✅ Trigger increment events for frontend counter
-        for _ in range(min(len(listings), 10)):
-            await message_queue.put("increment")
 
-        results = await asyncio.gather(*[process_listing(l, i) for i, l in enumerate(listings[:10])])
-        cleaned = [r for r in results if r]
+        # --- Main query first ---
+        cleaned = await fetch_and_process(query, label="main")
+
+        alt1 = None
+        alt2 = None
+
+        if len(cleaned) < 5:
+            alt1 = await gpt_ksl_fallback_query(query, 1)
+            if alt1:
+                alt1_results = await fetch_and_process(alt1, label="alt1")
+                cleaned += alt1_results
+
+        if len(cleaned) < 5:
+            alt2 = await gpt_ksl_fallback_query(query, 2)
+            if alt2:
+                alt2_results = await fetch_and_process(alt2, label="alt2")
+                cleaned += alt2_results
+
         cleaned.sort(key=lambda x: x["profit"], reverse=True)
-
         total_time = round(time.time() - start_time, 2)
         print(f"✅ Finished /ksl_deals for: {query} | Returned: {len(cleaned)} | Time: {total_time}s")
-        return cleaned[:5]
+
+        return {
+            "results": cleaned[:5],
+            "alt1": alt1,
+            "alt2": alt2
+        }
 
     except Exception as e:
         print("❌ General error in /ksl_deals:")
