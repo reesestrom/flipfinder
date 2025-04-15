@@ -967,12 +967,12 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
       "Listings Searched: ",
       React.createElement("span", { style: { color: "#4CAF50", fontWeight: "bold" } }, listingsSearched)
     ),    
-    kslResults.length > 0 &&
+    //kslResults.length > 0 &&
     React.createElement("div", {
       className: "result-box",
       style: { marginBottom: "30px", background: "#fdfdfd" }
     },
-      React.createElement("h2", null, "Local KSL Listings"),
+      React.createElement("h2", null, "Top KSL Listings"),
       kslResults.map((item, i) =>
         React.createElement("div", {
           key: `ksl-${item.url}`,
@@ -1059,7 +1059,6 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
         )
       )      
 ),
-      ebayResults.length > 0 &&
       React.createElement("div", { className: "result-box", style: { marginTop: "20px", background: "#fdfdfd" } },
         React.createElement("h2", null, "Top Ebay Listings"),
         ebayResults.map((item, i) =>
@@ -1157,7 +1156,8 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             }, `$${item.profit.toFixed(2)}`)
           ]),          
         )
-      ), React.createElement("p", null, "Local results can take up to 2 min to load."),
+      ),
+       React.createElement("p", null, "Local results can take up to 2 min to load."),
       
       React.createElement("div", { className: "saved-box", style: { marginTop: "60px" } },
         React.createElement("h2", null, "⭐ Saved Listings"),
