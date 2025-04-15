@@ -147,6 +147,9 @@ Original user search:
 Return ONLY valid JSON:
 {{ "query": "simple product keywords" }}
 """
+            print(f"⚙️ Running GPT fallback KSL query: iteration={iteration}")
+            print(f"📩 Prompt sent to GPT:\n{prompt}")
+
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -160,7 +163,7 @@ Return ONLY valid JSON:
             if raw.endswith("```"):
                 raw = raw.removesuffix("```").strip()
             raw = re.sub(r",(\s*[}\]])", r"\1", raw)
-
+            print(f"📤 GPT raw response:\n{raw}")
             try:
                 return json.loads(raw)["query"]
             except Exception:

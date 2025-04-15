@@ -466,7 +466,12 @@ function App() {
           setResults(prev => {
             const updated = [...prev, item];
             return updated
-              .filter((item, index, self) => index === self.findIndex(i => i.url === item.url))
+              .filter((item, index, self) =>
+                index === self.findIndex(i =>
+                  i.url === item.url ||
+                  (i.title === item.title && i.price === item.price)
+                )
+              )            
               .sort((a, b) => b.profit - a.profit)
               .slice(0, 5);
           });
@@ -539,13 +544,22 @@ function App() {
             _source: "ebay"
           }));
   
-          setResults(prev => [...prev, ...ebayResults].sort((a, b) => b.profit - a.profit).slice(0, 5));
-          setParsedQueries(prev => [...prev, ebayData.parsed]);
+          setResults(prev => {
+            const combined = [...prev, ...ebayResults];
+            const deduped = combined.filter((item, index, self) =>
+              index === self.findIndex(i =>
+                i.url === item.url ||
+                (i.title === item.title && i.price === item.price)
+              )
+            );
+            return deduped.sort((a, b) => b.profit - a.profit).slice(0, 5);
+          });
+                    setParsedQueries(prev => [...prev, ebayData.parsed]);
   
           console.log(`✅ eBay finished for ${source} query:`, query);
   
           // 🧭 KSL runs only for alt1 and alt2
-          if (["user", "alt1", "alt2"].includes(source)) {
+          if (source === "user") {
             console.log("🚀 KSL fetch sending for:", query);
             try {
               const kslRes = await fetch("https://flipfinder.onrender.com/ksl_deals", {
