@@ -190,7 +190,7 @@ Return ONLY valid JSON:
                     return None
                 # 🔄 Increment counter for live tracking
                 await message_queue.put("increment")
-                
+
                 result = {
                     "title": title,
                     "price": price,
@@ -835,9 +835,9 @@ Original parsed intent:
 
 Please try a **new, independent** eBay-style search query:
 - Do not copy the previous search query, instead search something that is different yet fundamentally related to the original seearch query
-- Additionally, do not make adjustments to included and excluded terms by removing, changing, or finding synonms for them
-- Reword the `query` to be simpler or more natural for eBay titles.
-- The new query should **NEVER EXCEED 3-4 words**
+- Reword the `query` to be simple and a natural search query yet something slightly different than the previous query
+- The new query should **NEVER EXCEED 3-4 words (excluding a brand name)**
+- **never exclude an entire brand name** however it is ok to change brand names slightly ex. Apple iPhone -> iPhone
 - You may simplify or remove unnecessary words from the query and move them to include_terms.
 - Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
 - Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing \"broken\" to \"not working\")
