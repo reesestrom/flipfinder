@@ -453,10 +453,12 @@ function App() {
     setParsedQueries([]);
     setListingsSearched(0);
   
+    const evtSource = new EventSource("https://flipfinder.onrender.com/events");
+  
     evtSource.onmessage = function (event) {
       try {
         const msg = JSON.parse(event.data);
-    
+  
         if (msg.type === "increment") {
           setListingsSearched(prev => prev + 1);
         } else if (msg.type === "new_result") {
@@ -470,7 +472,6 @@ function App() {
           });
         }
       } catch (err) {
-        // fallback for legacy plain-string increment
         if (event.data === "increment") {
           setListingsSearched(prev => prev + 1);
         } else {
@@ -478,7 +479,6 @@ function App() {
         }
       }
     };
-    
   
     console.log("📍 Location state:", { userZip, userCity, userState });
     if (!userCity || !userState) {
@@ -505,7 +505,7 @@ function App() {
   
       const aiData = await aiRes.json();
       console.log("🧠 Parsed AI response:", aiData.parsed);
-
+  
       const refinedQuery = aiData.parsed?.query || userQuery;
       const alt1 = aiData.parsed?.alt1 || null;
       const alt2 = aiData.parsed?.alt2 || null;
@@ -557,20 +557,21 @@ function App() {
                   state: userState
                 })
               });
-          
+  
               if (!kslRes.ok) {
                 const errText = await kslRes.text();
                 console.warn(`⚠️ KSL failed for query ${query}:`, errText);
                 return;
               }
-          
-              await kslRes.json(); // we're already handling results live from SSE
-
-              console.log(`✅ KSL done for query ${query} — ${kslResults.length} results`);
+  
+              // 🚫 Don't add results here — handled via SSE already
+              await kslRes.json();
+  
+              console.log(`✅ KSL done for query ${query}`);
             } catch (err) {
               console.error("❌ KSL fetch crashed:", err);
             }
-          }          
+          }
         } catch (err) {
           console.error(`❌ Error with ${source} query "${query}":`, err);
         }
@@ -585,6 +586,7 @@ function App() {
       setIsLoading(false);
     }
   }
+  
   
   
   
