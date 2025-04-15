@@ -122,7 +122,7 @@ async def ksl_deals(nq: NaturalQuery):
                     print(f"📦 [{label}] Listings returned:", len(raw_json))
 
                     results = await asyncio.gather(*[
-                        process_listing(l, i) for i, l in enumerate(raw_json[:20])
+                        process_listing(l, i) for i, l in enumerate(raw_json[:30])
                     ])
                     return [r for r in results if r]
             except Exception:
@@ -177,8 +177,7 @@ Return ONLY valid JSON:
                 if not title or not listing.get("price"):
                     return None
 
-                # 🔄 Increment counter for live tracking
-                await message_queue.put("increment")
+                
 
                 # 💡 Process profit
                 refinement = refine_title_and_condition(title, "", "used")
@@ -189,7 +188,9 @@ Return ONLY valid JSON:
 
                 if roi < ROI_THRESHOLD:
                     return None
-
+                # 🔄 Increment counter for live tracking
+                await message_queue.put("increment")
+                
                 result = {
                     "title": title,
                     "price": price,

@@ -33,6 +33,9 @@ function App() {
   const [email, setEmail] = useState("");
   const [userCity, setUserCity] = useState("");
   const [userState, setUserState] = useState("");
+  const [kslResults, setKslResults] = useState([]);
+  const [ebayResults, setEbayResults] = useState([]);
+
 
   
   
@@ -449,7 +452,8 @@ function App() {
 
   async function handleSearch() {
     setIsLoading(true);
-    setResults([]);
+    setKslResults([]);      // ✅ You must declare these state variables in your component
+    setEbayResults([]);
     setParsedQueries([]);
     setListingsSearched(0);
   
@@ -463,18 +467,34 @@ function App() {
           setListingsSearched(prev => prev + 1);
         } else if (msg.type === "new_result") {
           const item = msg.data;
-          setResults(prev => {
-            const updated = [...prev, item];
-            return updated
-              .filter((item, index, self) =>
-                index === self.findIndex(i =>
-                  i.url === item.url ||
-                  (i.title === item.title && i.price === item.price)
+  
+          if (item._source === "ksl") {
+            setKslResults(prev => {
+              const updated = [...prev, item];
+              return updated
+                .filter((item, index, self) =>
+                  index === self.findIndex(i =>
+                    i.url === item.url ||
+                    (i.title === item.title && i.price === item.price)
+                  )
                 )
-              )
-              .sort((a, b) => b.profit - a.profit)
-              .slice(0, 5);
-          });
+                .sort((a, b) => b.profit - a.profit)
+                .slice(0, 5);
+            });
+          } else if (item._source === "ebay") {
+            setEbayResults(prev => {
+              const updated = [...prev, item];
+              return updated
+                .filter((item, index, self) =>
+                  index === self.findIndex(i =>
+                    i.url === item.url ||
+                    (i.title === item.title && i.price === item.price)
+                  )
+                )
+                .sort((a, b) => b.profit - a.profit)
+                .slice(0, 5);
+            });
+          }
         }
       } catch (err) {
         if (event.data === "increment") {
@@ -494,9 +514,8 @@ function App() {
     }
   
     try {
-      const userQuery = searchInputs[0]; // original user input
+      const userQuery = searchInputs[0];
   
-      // Step 1: Send user query to get parsed + AI alternatives
       const aiRes = await fetch("https://flipfinder.onrender.com/ai_search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -529,7 +548,6 @@ function App() {
         .then(() => console.log("✅ [EARLY] KSL done for:", refinedQuery))
         .catch(err => console.error("❌ [EARLY] KSL fetch crashed:", err));
   
-      // Step 2: Run eBay searches in parallel
       const allQueries = [
         { source: "user", query: refinedQuery },
         ...(alt1 ? [{ source: "alt1", query: alt1 }] : []),
@@ -557,15 +575,19 @@ function App() {
             _source: "ebay"
           }));
   
-          setResults(prev => {
-            const combined = [...prev, ...ebayResults];
-            const deduped = combined.filter((item, index, self) =>
-              index === self.findIndex(i =>
-                i.url === item.url ||
-                (i.title === item.title && i.price === item.price)
-              )
-            );
-            return deduped.sort((a, b) => b.profit - a.profit).slice(0, 5);
+          ebayResults.forEach(item => {
+            setEbayResults(prev => {
+              const updated = [...prev, item];
+              return updated
+                .filter((item, index, self) =>
+                  index === self.findIndex(i =>
+                    i.url === item.url ||
+                    (i.title === item.title && i.price === item.price)
+                  )
+                )
+                .sort((a, b) => b.profit - a.profit)
+                .slice(0, 5);
+            });
           });
   
           setParsedQueries(prev => [...prev, ebayData.parsed]);
@@ -576,7 +598,6 @@ function App() {
         }
       });
   
-      // ✅ Await both eBay queries + early KSL fetch
       await Promise.all([
         ...queryTasks,
         kslTask
@@ -589,6 +610,7 @@ function App() {
       setIsLoading(false);
     }
   }
+  
   
   
   
@@ -945,15 +967,15 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
       "Listings Searched: ",
       React.createElement("span", { style: { color: "#4CAF50", fontWeight: "bold" } }, listingsSearched)
     ),    
-    results.some(r => r._source === "ksl") &&
+    kslResults.length > 0 &&
     React.createElement("div", {
       className: "result-box",
       style: { marginBottom: "30px", background: "#fdfdfd" }
     },
       React.createElement("h2", null, "Local KSL Listings"),
-      results.filter(r => r._source === "ksl").map((item, i) =>
+      kslResults.map((item, i) =>
         React.createElement("div", {
-          key: `ksl-${i}`,
+          key: `ksl-${item.url}`,
           style: {
             display: "flex",
             alignItems: "center",
@@ -1037,10 +1059,10 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
         )
       )      
 ),
-    React.createElement("div", { className: "result-box", style: { marginTop: "20px" } },
-      React.createElement("h2", null, "Top Ebay Listings"),
-      results.length > 0
-        ? results.filter(r => r._source !== "ksl").map((item, i) =>
+      ebayResults.length > 0 &&
+      React.createElement("div", { className: "result-box", style: { marginTop: "20px", background: "#fdfdfd" } },
+        React.createElement("h2", null, "Top Ebay Listings"),
+        ebayResults.map((item, i) =>
         React.createElement("div", {
           key: i,
           style: {
@@ -1135,7 +1157,8 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
             }, `$${item.profit.toFixed(2)}`)
           ]),          
         )
-      ) : React.createElement("p", null, "Results can take up to 2 min to load."),
+      ), React.createElement("p", null, "Local results can take up to 2 min to load."),
+      
       React.createElement("div", { className: "saved-box", style: { marginTop: "60px" } },
         React.createElement("h2", null, "⭐ Saved Listings"),
         savedItems.length > 0
