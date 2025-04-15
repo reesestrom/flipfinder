@@ -471,7 +471,7 @@ function App() {
                   i.url === item.url ||
                   (i.title === item.title && i.price === item.price)
                 )
-              )            
+              )
               .sort((a, b) => b.profit - a.profit)
               .slice(0, 5);
           });
@@ -515,16 +515,29 @@ function App() {
       const alt1 = aiData.parsed?.alt1 || null;
       const alt2 = aiData.parsed?.alt2 || null;
   
+      // ✅ Start KSL immediately for user query
+      console.log("🚀 [EARLY] KSL fetch sending for:", refinedQuery);
+      const kslTask = fetch("https://flipfinder.onrender.com/ksl_deals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          search: refinedQuery,
+          city: userCity,
+          state: userState
+        })
+      }).then(res => res.json())
+        .then(() => console.log("✅ [EARLY] KSL done for:", refinedQuery))
+        .catch(err => console.error("❌ [EARLY] KSL fetch crashed:", err));
+  
+      // Step 2: Run eBay searches in parallel
       const allQueries = [
         { source: "user", query: refinedQuery },
         ...(alt1 ? [{ source: "alt1", query: alt1 }] : []),
         ...(alt2 ? [{ source: "alt2", query: alt2 }] : [])
       ];
   
-      // Step 2: For each query, run eBay (and KSL if AI-generated)
       const queryTasks = allQueries.map(async ({ source, query }) => {
         try {
-          // 🔍 eBay call
           const ebayRes = await fetch("https://flipfinder.onrender.com/ai_search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -554,44 +567,20 @@ function App() {
             );
             return deduped.sort((a, b) => b.profit - a.profit).slice(0, 5);
           });
-                    setParsedQueries(prev => [...prev, ebayData.parsed]);
+  
+          setParsedQueries(prev => [...prev, ebayData.parsed]);
   
           console.log(`✅ eBay finished for ${source} query:`, query);
-  
-          // 🧭 KSL runs only for alt1 and alt2
-          if (source === "user") {
-            console.log("🚀 KSL fetch sending for:", query);
-            try {
-              const kslRes = await fetch("https://flipfinder.onrender.com/ksl_deals", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  search: query,
-                  city: userCity,
-                  state: userState
-                })
-              });
-  
-              if (!kslRes.ok) {
-                const errText = await kslRes.text();
-                console.warn(`⚠️ KSL failed for query ${query}:`, errText);
-                return;
-              }
-  
-              // 🚫 Don't add results here — handled via SSE already
-              await kslRes.json();
-  
-              console.log(`✅ KSL done for query ${query}`);
-            } catch (err) {
-              console.error("❌ KSL fetch crashed:", err);
-            }
-          }
         } catch (err) {
           console.error(`❌ Error with ${source} query "${query}":`, err);
         }
       });
   
-      await Promise.all(queryTasks);
+      // ✅ Await both eBay queries + early KSL fetch
+      await Promise.all([
+        ...queryTasks,
+        kslTask
+      ]);
     } catch (error) {
       alert("Error performing the search.");
       console.error("Search error:", error);
@@ -600,6 +589,7 @@ function App() {
       setIsLoading(false);
     }
   }
+  
   
   
   

@@ -122,7 +122,7 @@ async def ksl_deals(nq: NaturalQuery):
                     print(f"📦 [{label}] Listings returned:", len(raw_json))
 
                     results = await asyncio.gather(*[
-                        process_listing(l, i) for i, l in enumerate(raw_json[:10])
+                        process_listing(l, i) for i, l in enumerate(raw_json[:20])
                     ])
                     return [r for r in results if r]
             except Exception:
@@ -216,21 +216,31 @@ Return ONLY valid JSON:
 
         # --- Main query first ---
         cleaned = await fetch_and_process(query, label="main")
+        print(f"✅ Qualified listings after main: {len(cleaned)}")
+
 
         alt1 = None
         alt2 = None
 
-        if len(cleaned) < 5:
+        qualified_count = len([r for r in cleaned if r])
+        if qualified_count < 5:
+            print("🔁 Not enough KSL results — trying alt1")
             alt1 = await gpt_ksl_fallback_query(query, 1)
             if alt1:
                 alt1_results = await fetch_and_process(alt1, label="alt1")
                 cleaned += alt1_results
 
-        if len(cleaned) < 5:
+        print(f"✅ After alt1: {len(cleaned)}")
+
+
+        qualified_count = len([r for r in cleaned if r])
+        if qualified_count < 5:
+            print("🔁 Still under 5 — trying alt2")
             alt2 = await gpt_ksl_fallback_query(query, 2)
             if alt2:
                 alt2_results = await fetch_and_process(alt2, label="alt2")
                 cleaned += alt2_results
+
 
         cleaned.sort(key=lambda x: x["profit"], reverse=True)
         total_time = round(time.time() - start_time, 2)
