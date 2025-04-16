@@ -830,21 +830,22 @@ User's full original search message:
 Original parsed intent:
 - Query: \"{original_query}\"
 - Condition: {condition}
-- Include terms: {original_include_terms}
-- Exclude terms: {original_exclude_terms}
+- Include terms: {json.dumps(original_include_terms)}
+- Exclude terms: {json.dumps(original_exclude_terms)}
 
 Please try a **new, independent** eBay-style search query:
-- Do not copy the previous search query, instead search something that is different yet fundamentally related to the original seearch query
-- Reword the `query` to be simple and a natural search query yet something slightly different than the previous query
-- The new query should **NEVER EXCEED 3-4 words (excluding a brand name)**
-- **never exclude an entire brand name** however it is ok to change brand names slightly ex. Apple iPhone -> iPhone
-- You may simplify or remove unnecessary words from the query and move them to include_terms.
-- Do NOT ignore the user's intent — especially things like condition or tolerance for scratches, damage, etc.
-- Be flexible and change any included and excluded terms, but make sure they are still connected to or relevant to the original search query. For example, use synonyms (changing \"broken\" to \"not working\")
-- NEVER add unrelated words unless the user originally said so.
-    -for example, if a user searched used kitchenaid mixer, your refined query can be kitcheniad mixer, or used kitchanid mixer, or kitchenaid.
 
-Return ONLY valid JSON:
+- Do not copy the previous search query — instead, search something that is different yet fundamentally related to the original query.
+- Reword the `query` to be simple and natural, but meaningfully different.
+- The new query should **NEVER exceed 3–4 words (excluding brand names)**.
+- 🔒 Always preserve the product *category* (e.g., “mixer” must stay a kitchen appliance — not a DJ mixer).
+- 🔒 Keep the brand name (e.g., “kitchenaid”) or a close spelling unless the original query was generic.
+- You may simplify or remove unnecessary words from the query and move them into `include_terms`.
+- Do NOT ignore the user's intent — especially regarding condition or tolerance for flaws.
+- 🛑 NEVER include unrelated categories (e.g., DJ equipment when searching for kitchen tools).
+- NEVER add unrelated words unless the user originally said so.
+
+Return ONLY valid JSON in the exact format below:
 {{
   "query": "short new search string",
   "condition": "{condition}",
@@ -852,6 +853,7 @@ Return ONLY valid JSON:
   "exclude_terms": {json.dumps(original_exclude_terms)}
 }}
 """
+
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
