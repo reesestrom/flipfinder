@@ -842,7 +842,7 @@ Please try a **new, independent** eBay-style search query:
 - 🔒 Keep the brand name (e.g., “kitchenaid”) or a close spelling unless the original query was generic.
 - You may simplify or remove unnecessary words from the query and move them into `include_terms`.
 - Do NOT ignore the user's intent — especially regarding condition or tolerance for flaws.
-- 🛑 NEVER include unrelated categories (e.g., DJ equipment when searching for kitchen tools).
+- 🛑 NEVER include unrelated categories (e.g., DJ mixer when searching for kitchen mixer).
 - NEVER add unrelated words unless the user originally said so.
 
 Return ONLY valid JSON in the exact format below:
