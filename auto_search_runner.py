@@ -23,7 +23,7 @@ for search in searches:
     try:
         parsed = parse_search_criteria(search.query_text)
         results = search_ebay(parsed, search.query_text)
-        top_5 = results[:5]
+        top_5 = results["results"][:5]
 
         print(f"📦 {user.username} | {search.query_text} | {len(top_5)} results")
 
