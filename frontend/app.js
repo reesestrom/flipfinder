@@ -637,7 +637,7 @@ function App() {
         src: "assets/flip finder logo.png",
         alt: "Resale Radar Logo",
         style: {
-          width: "450px",
+          width: "650px",
           marginBottom: "20px",
           marginTop: "-275px",
           marginBottom: "20px",
@@ -741,7 +741,7 @@ function App() {
       React.createElement("img", {
         src: "assets/flip finder logo.png",
         alt: "Resale Logo",
-        height: "250"
+        height: "150"
       })
     ),
     React.createElement("div", {
