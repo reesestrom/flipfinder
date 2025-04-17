@@ -63,7 +63,8 @@ def run_snapshot_for_search(search, user):
                 shipping=0,
                 profit=item["profit"],
                 created_at=now,
-                source="ksl"
+                source="ksl",
+                location=item.get("location")  # ✅ Store for email display
             )
             db.add(snapshot)
 
