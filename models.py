@@ -72,6 +72,7 @@ class SearchResultSnapshot(Base):
     price = Column(Float)
     shipping = Column(Float)
     profit = Column(Float)
+    source = Column(String, default="ebay") 
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
