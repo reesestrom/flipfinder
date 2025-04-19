@@ -940,7 +940,7 @@ showUsernameModal && React.createElement(window.ChangeUsernameModal, {
       React.createElement("p", null, "Local results can take up to 2 min to load."),    
 ),
       React.createElement("div", { className: "result-box", style: { marginTop: "20px", background: "#fdfdfd" } },
-        React.createElement("h2", null, "Top KSL Listings"),
+        //React.createElement("h2", null, "Top KSL Listings"),
       kslResults.map((item, i) =>
         React.createElement("div", {
           key: `ksl-${item.url}`,
