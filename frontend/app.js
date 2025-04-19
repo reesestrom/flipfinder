@@ -35,6 +35,8 @@ function App() {
   const [userState, setUserState] = useState("");
   const [kslResults, setKslResults] = useState([]);
   const [ebayResults, setEbayResults] = useState([]);
+  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+
 
 
   
