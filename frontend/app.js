@@ -611,92 +611,67 @@ function App() {
     }
   }
   
-  
-  
-  
-  
-  
-  
-
-  
-  
 
   if (!isAuthenticated) {
-    return React.createElement("div", {
-      style: {
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#f7f7f7",
-        padding: "20px"
-      }
-    },
-      React.createElement("img", {
-        src: "assets/flip finder logo.png",
-        alt: "Resale Radar Logo",
-        style: {
-          width: "650px",
-          marginBottom: "20px",
-          marginTop: "-275px",
-          marginBottom: "20px",
-        }
-      }),
-      React.createElement("div", { className: "subtitle" },
-        "Discover deals, track profits, and resell goods"
-      ),      
-      React.createElement("div", { className: "subtitle" },
-        "with your personal resale assistant!"
-      ),      
-      React.createElement("form", { onSubmit: handleLoginSubmit, style: { maxWidth: "300px", width: "100%" } },
-        ["email", "password"].map((field) =>
-          React.createElement("div", { key: field, style: { marginBottom: "10px", marginTop: "20px" } },
-            React.createElement("input", {
-              type: field === "password" ? "password" : "text",
-              placeholder: field.charAt(0).toUpperCase() + field.slice(1),
-              value: loginData[field],
-              required: true,
-              onChange: e => setLoginData({ ...loginData, [field]: e.target.value }),
-              style: {
-                width: "100%",
-                padding: "10px",
-                fontSize: "16px",
-                border: "1px solid #ccc",
-                borderRadius: "8px"
-              }
-            })
-          )
+    return React.createElement("div", { className: "main-wrapper" },
+      React.createElement("div", { className: "login-card" }, [
+  
+        React.createElement("img", {
+          src: "assets/flip finder logo.png",
+          alt: "Resale Radar Logo",
+          style: {
+            maxWidth: "240px",
+            height: "auto",
+            marginBottom: "20px"
+          }
+        }),
+  
+        React.createElement("div", { className: "subtitle" },
+          "Discover deals, track profits, and resell goods"
         ),
-        React.createElement("button", { type: "submit", className: "buttonPrimary", style: { width: "100%", padding: "10px" } }, "Log In"),
-        loginMessage && React.createElement("p", null, loginMessage)
-      ),
-      React.createElement("button", {
-        type: "button",
-        className: "signup-toggle",
-        onClick: () => {
-          const email = prompt("Enter your email to reset password:");
-          if (!email) return;
-      
-          fetch("https://flipfinder.onrender.com/request_password_reset", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: userEmail })  // ✅ Must match pydantic model in backend
-          })
-          
-            .then(res => res.json())
-            .then(data => alert(data.message || "If your email exists, you will receive a reset link."))
-            .catch(err => alert("Something went wrong. Please try again."));
-        }
-      }, "Forgot your password?"),
-      
-      React.createElement("div", { style: { marginTop: "20px" } },
+        React.createElement("div", { className: "subtitle" },
+          "with your personal resale assistant!"
+        ),
+  
+        React.createElement("form", { onSubmit: handleLoginSubmit },
+          ["email", "password"].map((field) =>
+            React.createElement("div", { key: field },
+              React.createElement("input", {
+                type: field === "password" ? "password" : "text",
+                placeholder: field.charAt(0).toUpperCase() + field.slice(1),
+                value: loginData[field],
+                required: true,
+                onChange: e => setLoginData({ ...loginData, [field]: e.target.value })
+              })
+            )
+          ),
+          React.createElement("button", { type: "submit", className: "buttonPrimary" }, "Log In"),
+          loginMessage && React.createElement("p", null, loginMessage)
+        ),
+  
+        React.createElement("a", {
+          href: "#",
+          onClick: () => {
+            const email = prompt("Enter your email to reset password:");
+            if (!email) return;
+  
+            fetch("https://flipfinder.onrender.com/request_password_reset", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: userEmail })
+            })
+              .then(res => res.json())
+              .then(data => alert(data.message || "If your email exists, you will receive a reset link."))
+              .catch(err => alert("Something went wrong. Please try again."));
+          }
+        }, "Forgot your password?"),
+  
         React.createElement("h4", null, "Don't have an account?"),
-        !showSignup && React.createElement("button", {
-          type: "button",
-          className: "signup-toggle",
+        !showSignup && React.createElement("a", {
+          href: "#",
           onClick: () => setShowSignup(true)
         }, "Sign Up"),
+  
         React.createElement("div", {
           style: { display: "flex", justifyContent: "center", width: "100%" }
         },
@@ -706,37 +681,31 @@ function App() {
             style: { maxWidth: "350px", width: "100%" }
           },
             ["username", "email", "password"].map((field) =>
-              React.createElement("div", { key: field, style: { marginBottom: "10px" } },
+              React.createElement("div", { key: field },
                 React.createElement("input", {
                   type: field === "password" ? "password" : "text",
                   placeholder: field.charAt(0).toUpperCase() + field.slice(1),
                   value: signupData[field],
                   required: true,
-                  onChange: e => setSignupData({ ...signupData, [field]: e.target.value }),
-                  style: {
-                    width: "100%",
-                    padding: "10px",
-                    fontSize: "16px",
-                    border: "1px solid #ccc",
-                    borderRadius: "8px"
-                  }
+                  onChange: e => setSignupData({ ...signupData, [field]: e.target.value })
                 })
               )
             ).concat([
               React.createElement("button", {
                 type: "submit",
-                className: "buttonSecondary",
-                style: { width: "100%", padding: "10px" }
+                className: "buttonSecondary"
               }, "Submit"),
               signupMessage && React.createElement("p", null, signupMessage)
             ])
           )
-        )      
-      )      
+        )
+      ])
     );
   }
+  
+  
 
-  return React.createElement("div", { style: { maxWidth: "800px", margin: "auto", padding: "20px" } },
+  return React.createElement("div", { className: "main-wrapper" },
     React.createElement("div", { className: "logo-wrapper" },
       React.createElement("img", {
         src: "assets/flip finder logo.png",
