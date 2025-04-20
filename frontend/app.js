@@ -673,6 +673,24 @@ function App() {
           href: "#",
           onClick: () => setShowSignup(true)
         }, "Sign Up"),
+        React.createElement("p", {
+          style: {
+            fontSize: "12px",
+            color: "#777",
+            marginTop: "10px",
+            lineHeight: "1.4"
+          }
+        }, [
+          "By logging in or signing up you agree to ",
+          React.createElement("a", {
+            href: "assets/privacy.pdf",
+            target: "_blank",
+            rel: "noopener noreferrer",
+            style: { color: "#4CAF50", textDecoration: "underline" }
+          }, "Resale Radar's privacy policy"),
+          "."
+        ]),
+        
   
         React.createElement("div", {
           style: { display: "flex", justifyContent: "center", width: "100%" }
